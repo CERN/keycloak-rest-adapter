@@ -1,0 +1,4 @@
+build/
+dist/
+keycloak_rest_adapter.egg-info/
+

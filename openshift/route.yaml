@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Route
+metadata:
+  annotations:
+    cern.ch/generated.host.replaced: "true"
+  creationTimestamp: null
+  labels:
+    app: keycloak-rest-adapter
+  name: keycloak-rest-adapter
+spec:
+  host: test-keycloak-rest-adapter.web.cern.ch
+  port:
+    targetPort: 8080-tcp
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+  to:
+    kind: Service
+    name: keycloak-rest-adapter
+    weight: 100
+  wildcardPolicy: None
+status:
+  ingress:
+  - conditions:
+    - lastTransitionTime: 2018-10-01T12:43:22Z
+      status: "True"
+      type: Admitted
+    host: test-keycloak-rest-adapter.web.cern.ch
+    routerCanonicalHostname: oonodelbdev.cern.ch
+    routerName: router
+    wildcardPolicy: None

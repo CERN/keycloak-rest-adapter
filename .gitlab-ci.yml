@@ -1,0 +1,68 @@
+variables:
+
+  NAMESPACE_DEV: test-keycloak-rest-adapter
+  NAMESPACE_PROD: keycloak-rest-adapter
+  OPENSHIFT_SERVER_DEV: https://openshift-dev.cern.ch
+  OPENSHIFT_SERVER_PROD: https://openshift.cern.ch
+  RESOURCE: ${CI_PROJECT_NAME} 
+
+stages:
+  - build_docker_image
+  - deploy_image
+
+# Environment definition for dev and prod
+.dev_environment: &dev_environment
+    name: dev
+    url: ${OPENSHIFT_SERVER_DEV}/console/project/${NAMESPACE_DEV}
+
+.prod_enviroment: &prod_environment
+    name: prod
+    url: ${OPENSHIFT_SERVER_PROD}/console/project/${NAMESPACE_PROD}
+
+# build new image from any commit to branch != master
+build_image_from_development:
+  stage: build_docker_image
+  tags:
+    - docker-image-build
+  script: "echo 'Building image from topic branch (non master)...'"
+  variables:
+    TO: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}
+
+build_image_from_master:
+  stage: build_docker_image
+  only:
+    - master
+  tags:
+    - docker-image-build
+  script: "echo 'Building image from master branch...'"
+
+.base_deploy: &base_deploy
+  stage: deploy_image
+  image: gitlab-registry.cern.ch/paas-tools/openshift-client
+  script:
+  - oc import-image ${RESOURCE}:${CI_COMMIT_TAG:-latest} --confirm --token=${TOKEN} --server=${SERVER} -n ${NAMESPACE}
+  - oc tag --reference-policy=local --source=docker  ${CI_REGISTRY_IMAGE}:${oo_tag} ${RESOURCE}:deployed-from-gitlab-ci --token=${TOKEN} --server=${SERVER} -n ${NAMESPACE}
+
+deploy_dev:
+  <<: *base_deploy
+  environment:
+    <<: *dev_environment
+  except:
+  - master
+  variables:
+    SERVER: ${OPENSHIFT_SERVER_DEV}
+    NAMESPACE: ${NAMESPACE_DEV}
+    TOKEN: ${SERVICE_ACCOUNT_TOKEN_IMAGEPUSHERDEV}
+    oo_tag: dev
+
+deploy_prod:
+  <<: *base_deploy
+  environment:
+    <<: *prod_environment
+  only:
+  - master
+  variables:
+    SERVER: ${OPENSHIFT_SERVER_PROD}
+    NAMESPACE: ${NAMESPACE_PROD}
+    TOKEN: ${SERVICE_ACCOUNT_TOKEN_IMAGEPUSHERPROD}
+    oo_tag: latest
