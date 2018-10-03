@@ -24,6 +24,8 @@ build_image_from_development:
   stage: build_docker_image
   tags:
     - docker-image-build
+  except:
+  - master
   script: "echo 'Building image from topic branch (non master)...'"
   variables:
     TO: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}
