@@ -425,16 +425,12 @@ class KeycloakAPIClient(object):
         return json.loads(ret.text)
 
     def get_access_token(self):
-        """ Return access_token after performing Client Credentials grant request and
-            Authorization Code Exchange
+        """
+        Return access_token using the configured client_id & secret
         """
         access_token_object = self.get_client_credentials_access_token(
             self.client_id, self.client_secret)
-        subject_token = access_token_object['access_token']
-        audience = "authorization-service-api-dev-danielfr"
-        client_exchange_token_object = self.get_token_exchange_request(
-            self.client_id, self.client_secret, subject_token, audience)
-        access_token = client_exchange_token_object['access_token']
+        access_token = access_token_object['access_token']
         return access_token
 
     def get_client_credentials_access_token(self, client_id, client_secret):
