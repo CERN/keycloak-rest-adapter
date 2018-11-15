@@ -4,6 +4,7 @@ from ConfigParser import ConfigParser
 from flask import Flask, make_response
 from flask_oidc import OpenIDConnect
 from flask_restful import Resource, Api, request
+from werkzeug.debug import DebuggedApplication
 
 import json
 import logging
@@ -25,6 +26,7 @@ API_VERSION = 1.0
 API_URL_PREFIX = '/api/v%s' % API_VERSION
 
 app = Flask(__name__)
+app.wsgi_app = DebuggedApplication(app.wsgi_app, evalex=False
 api = Api(app)
 
 app.config.update({
