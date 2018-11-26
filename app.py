@@ -16,7 +16,8 @@ import os
 config_dir = os.getcwd()
 privatekey_file = "{0}/config/keycloak-rest-adapter_nopass.key"
 certificate_file = "{0}/config/keycloak-rest-adapter.crt"
-keycloakclient_config_file = '{0}/config/keycloak_client.cfg'.format(config_dir)
+keycloakclient_config_file = '{0}/config/keycloak_client.cfg'.format(
+    config_dir)
 flask_oidc_client_secrets_file = '{0}/config/flask_oidc_config.json'.format(
     config_dir)
 
@@ -44,6 +45,7 @@ oidc = OpenIDConnect(app)
 def configure_logging():
     """Logging setup
     """
+    logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s %(levelname)s - %(message)s')
@@ -571,7 +573,8 @@ class Client(Resource):
             return ret.reason
         else:
             return json_response(
-                "Verify '{0}' and '{1}' exist".format(target_client_name, requestor_client_name),
+                "Verify '{0}' and '{1}' exist".format(
+                    target_client_name, requestor_client_name),
                 400)
 
     @app.route('{0}/client/openid'.format(API_URL_PREFIX), methods=['POST'])
@@ -612,7 +615,7 @@ class Client(Resource):
 
 
 if __name__ == '__main__':
-    print ("** Debug mode should never be used in a production environment! ***")
+    print("** Debug mode should never be used in a production environment! ***")
     app.run(
         host='0.0.0.0',
         ssl_context=(
