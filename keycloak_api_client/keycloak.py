@@ -45,7 +45,6 @@ class KeycloakAPIClient(object):
     def __configure_logging(self):
         """Logging setup
         """
-        logging.basicConfig(level=logging.DEBUG)
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s %(levelname)s - %(message)s')
