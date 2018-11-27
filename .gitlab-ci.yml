@@ -43,7 +43,7 @@ build_image_from_master:
   image: gitlab-registry.cern.ch/paas-tools/openshift-client
   script:
   - oc import-image ${RESOURCE}:${CI_COMMIT_TAG:-latest} --confirm --token=${TOKEN} --server=${SERVER} -n ${NAMESPACE}
-  - oc tag --reference-policy=local --source=docker  ${CI_REGISTRY_IMAGE}:${OO_TAG} ${RESOURCE}:deployed-from-gitlab-ci --token=${TOKEN} --server=${SERVER} -n ${NAMESPACE}
+  - oc tag --reference-policy=local --source=docker  ${CI_REGISTRY_IMAGE}:${OO_TAG} ${RESOURCE}:${OO_TAG} --token=${TOKEN} --server=${SERVER} -n ${NAMESPACE}
 
 deploy_dev:
   <<: *base_deploy
