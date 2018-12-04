@@ -39,6 +39,7 @@ class KeycloakAPIClient(object):
         self.session = requests.Session()
         self.session.verify = self.ssl_cert_path
 
+        self.logger.info("Client configured to talk to '{0}' server and realm '{1}'".format(self.keycloak_server, self.realm))
         self.access_token_object = None
         self.master_realm_client = self.get_client_by_clientID("master-realm")
 
@@ -131,6 +132,27 @@ class KeycloakAPIClient(object):
             headers=headers,
             data=json.dumps(data))
         return ret
+
+
+    def delete_client_by_clientID(self, client_id):
+        """
+        Delete client with the given clientID name
+        """
+        headers = self.__get_admin_access_token_headers()
+        client_object = self.get_client_by_clientID(client_id)
+        if client_object:
+            url = '{0}/admin/realms/{1}/clients/{2}'.format(
+                self.base_url, self.realm, client_object['id'])
+
+            ret = self.send_request(
+                'delete',
+                url,
+                headers=headers)
+            self.logger.info("Deleted client '%s'", client_id)
+            return ret
+        else:
+            self.logger.info("Cannot delete '%s'. Client not found", client_id)
+
 
     def get_client_by_clientID(self, client_id):
         """

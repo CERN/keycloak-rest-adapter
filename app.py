@@ -98,6 +98,7 @@ class Client(Resource):
                     target_client_name, requestor_client_name),
                 400)
 
+
     @app.route('{0}/client/openid'.format(API_URL_PREFIX), methods=['POST'])
     @oidc.accept_token(require_token=True)
     def client_create_openid():
@@ -134,6 +135,19 @@ class Client(Resource):
         new_client = keycloak_client.create_new_client(**data)
         return new_client.text
 
+
+    @app.route('{0}/client/<clientId>'.format(API_URL_PREFIX), methods=['DELETE'])
+    @oidc.accept_token(require_token=True)
+    def client_delete(clientId):
+        ret = keycloak_client.delete_client_by_clientID(clientId)
+        if ret:
+            return json_response(
+                "Client '{0}' deleted succesfully".format(clientId),
+                200)
+        else:
+            return json_response(
+                "Cannot delete client '{0}'. Client not found".format(clientId),
+                404)
 
 if __name__ == '__main__':
     print("** Debug mode should never be used in a production environment! ***")
