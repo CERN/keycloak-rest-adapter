@@ -135,8 +135,9 @@ class Client(Resource):
         new_client = keycloak_client.create_new_client(**data)
         return new_client.text
 
-
     @app.route('{0}/client/<clientId>'.format(API_URL_PREFIX), methods=['DELETE'])
+    @app.route('{0}/client/saml/<clientId>'.format(API_URL_PREFIX), methods=['DELETE'])
+    @app.route('{0}/client/openid/<clientId>'.format(API_URL_PREFIX), methods=['DELETE'])
     @oidc.accept_token(require_token=True)
     def client_delete(clientId):
         ret = keycloak_client.delete_client_by_clientID(clientId)
