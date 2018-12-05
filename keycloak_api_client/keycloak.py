@@ -451,6 +451,7 @@ class KeycloakAPIClient(object):
         }
         url = '{0}/realms/{1}/clients-registrations/default'.format(
             self.base_url, self.realm)
+        self.logger.info("Creating client '{0}' --> {1}".format(kwargs['clientId'], kwargs))
         return self.send_request(
             'post',
             url,
@@ -468,6 +469,7 @@ class KeycloakAPIClient(object):
         if 'attributes' not in kwargs:
             kwargs['attributes'] = {}
         if 'protocol' not in kwargs or kwargs['protocol'] != 'openid-connect':
+            # on API level we accept 'openid-connect' & 'openid'. Keycloak only accepts 'openid-connect'
             kwargs['protocol'] = 'openid-connect'
         return self.__create_client(access_token, **kwargs)
 
@@ -493,13 +495,5 @@ class KeycloakAPIClient(object):
             protocol = kwargs['protocol']
             if protocol == 'saml':
                 return self.create_new_saml_client(**kwargs)
-            elif protocol == 'openid-connect':
+            elif protocol in ['openid-connect', 'openid']:
                 return self.create_new_openid_client(**kwargs)
-            else:
-                return json_response(
-                    "The request is invalid. 'protocol' only supports 'saml' and 'openid-connect' values",
-                    400)
-        else:
-            return json_response(
-                "The request is missing the 'protocol'. It must be passed as a query parameter",
-                400)

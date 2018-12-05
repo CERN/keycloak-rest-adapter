@@ -18,6 +18,9 @@ keycloakclient_config_file = '{0}/config/keycloak_client.cfg'.format(config_dir)
 flask_oidc_client_secrets_file = '{0}/config/flask_oidc_config.json'.format(
     config_dir)
 
+default_openid_protocol_mappers_file = '{0}/config/client_protocol_mappers.json'.format(
+    config_dir)
+
 API_VERSION = 1.0
 API_URL_PREFIX = '/api/v%s' % API_VERSION
 
@@ -98,40 +101,32 @@ class Client(Resource):
                     target_client_name, requestor_client_name),
                 400)
 
-
-    @app.route('{0}/client/openid'.format(API_URL_PREFIX), methods=['POST'])
-    @oidc.accept_token(require_token=True)
-    def client_create_openid():
-        data = get_request_data(request)
-        # no clientId --> return error
-        if not data or 'clientId' not in data:
-            return json_response(
-                "The request is missing the 'clientId'. It must be passed as a query parameter",
-                400)
-        new_client = keycloak_client.create_new_openid_client(**data)
-        return new_client.text
-
-    @app.route('{0}/client/saml'.format(API_URL_PREFIX), methods=['POST'])
-    @oidc.accept_token(require_token=True)
-    def client_create_saml():
-        data = get_request_data(request)
-        # no clientId --> return error
-        if not data or 'clientId' not in data:
-            return json_response(
-                "The request is missing the 'clientId'. It must be passed as a query parameter",
-                400)
-        new_client = keycloak_client.create_new_saml_client(**data)
-        return new_client.text
-
     @app.route('{0}/client'.format(API_URL_PREFIX), methods=['POST'])
+    @app.route('{0}/client/<protocol>'.format(API_URL_PREFIX), methods=['POST'])
     @oidc.accept_token(require_token=True)
-    def client_create():
+    def client_create(protocol):
+        supported_protocols = ['saml', 'openid']
         data = get_request_data(request)
-        # no clientId nor protocol --> return error
-        if not data or 'clientId' not in data or 'protocol' not in data:
-            return json_response(
-                "The request is missing the 'clientId' or 'protocol'. They must be passed as a query parameter.",
-                400)
+
+        if protocol:
+            if protocol not in supported_protocols:
+                return json_response(
+                    "Client protocol type '{0}' not suported. Chose between '{1}'".format(protocol, supported_protocols),
+                    404)
+            else:
+                data['protocol'] = protocol
+        else:
+            # no clientId nor protocol --> return error
+            if not data or 'clientId' not in data or 'protocol' not in data:
+                return json_response(
+                    "The request is missing the 'clientId' or 'protocol'. They must be passed as a query parameter.",
+                    400)
+
+        if data['protocol'] == "openid" and 'protocolMappers' not in data:
+            with open(default_openid_protocol_mappers_file) as f:
+                default_openid_protocol_mappers = json.load(f)
+            data['protocolMappers'] = default_openid_protocol_mappers['protocolMappers']
+
         new_client = keycloak_client.create_new_client(**data)
         return new_client.text
 
