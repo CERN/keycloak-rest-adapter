@@ -12,6 +12,7 @@ variables:
 
 stages:
   - build_docker
+  - test
   - deploy
 
 .docker_build_template: &docker_definition
@@ -46,6 +47,11 @@ build_docker_prod:
     TO: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
   only:
     - tags # the branch you want to publish
+
+test:
+  stage: test
+  script:
+    - 'echo "Tests not implemented..."'
 
 deploy_dev:
   <<: *deploy_definition
