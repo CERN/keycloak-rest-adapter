@@ -29,7 +29,9 @@ stages:
   stage: deploy
   image: gitlab-registry.cern.ch/paas-tools/openshift-client:latest
   script:
-    - oc import-image gitlab-registry.cern.ch/${CI_PROJECT_PATH}:${TAG} --confirm --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
+    - oc import-image ${RESOURCE}:${CI_COMMIT_TAG:-latest} --confirm --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
+    - oc process --local -f openshift/adapter_configmap.yaml -p KEYCLOAK_ADMIN_PASSWORD=$KEYCLOAK_ADMIN_PASSWORD -p KEYCLOAK_REST_ADAPTER_CLIENT_SECRET=$KEYCLOAK_REST_ADAPTER_CLIENT_SECRET | oc replace -f - --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
+    - oc tag --reference-policy=local --source=docker ${CI_REGISTRY_IMAGE}:${TAG} ${RESOURCE}:${TAG} --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
 
 build_docker_dev:
   <<: *docker_definition
@@ -56,14 +58,6 @@ test:
   stage: test
   script:
     - 'echo "Tests not implemented..."'
-
-.base_deploy: &base_deploy
-  stage: deploy_image
-  image: gitlab-registry.cern.ch/paas-tools/openshift-client
-  script:
-    - oc import-image ${RESOURCE}:${CI_COMMIT_TAG:-latest} --confirm --token=${TOKEN} --server=${SERVER} -n ${NAMESPACE}
-    - oc process --local -f openshift/adapter_configmap.yaml -p KEYCLOAK_ADMIN_PASSWORD=$KEYCLOAK_ADMIN_PASSWORD  -p KEYCLOAK_REST_ADAPTER_CLIENT_SECRET=$KEYCLOAK_REST_ADAPTER_CLIENT_SECRET | oc replace -f - --token=${TOKEN} --server=${SERVER} -n ${NAMESPACE}
-    - oc tag --reference-policy=local --source=docker  ${CI_REGISTRY_IMAGE}:${OO_TAG} ${RESOURCE}:${OO_TAG} --token=${TOKEN} --server=${SERVER} -n ${NAMESPACE}
 
 deploy_dev:
   <<: *deploy_definition
