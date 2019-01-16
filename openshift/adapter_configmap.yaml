@@ -27,17 +27,17 @@ objects:
             }
           },
           {
-                "name": "federation link external”,
-                "protocol": "openid-connect",
-                "protocolMapper": "oidc-usersessionmodel-note-mapper",
-                "consentRequired": false,
-                "config": {
-                  "user.session.note": "identity_provider",
-                  "id.token.claim": "true",
-                  "access.token.claim": "true",
-                  "claim.name": "federationLink",
-                  "jsonType.label": "String"
-                }
+            "name": "federation link external",
+            "protocol": "openid-connect",
+            "protocolMapper": "oidc-usersessionmodel-note-mapper",
+            "consentRequired": false,
+            "config": {
+              "user.session.note": "identity_provider",
+              "id.token.claim": "true",
+              "access.token.claim": "true",
+              "claim.name": "federationLink",
+              "jsonType.label": "String"
+            }
           },
           {
             "name": "username",
