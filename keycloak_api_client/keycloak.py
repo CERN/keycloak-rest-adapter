@@ -85,7 +85,12 @@ class KeycloakAPIClient(object):
 
     def send_request(self, request_type, url, **kwargs):
         """ Call the private method __send_request and retry in case the access_token has expired"""
-        ret = self.__send_request(request_type, url, **kwargs)
+        try:
+            ret = self.__send_request(request_type, url, **kwargs)
+        except requests.exceptions.ConnectionError:
+            msg = "Cannot process the request. Is the keycloak server down ('{0}')?".format(self.keycloak_server)
+            self.logger.error(msg)
+            raise Exception (msg)
 
         if ret.reason == 'Unauthorized':
             self.logger.info("Admin token seems expired. Getting new admin token")
