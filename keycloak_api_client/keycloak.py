@@ -133,6 +133,30 @@ class KeycloakAPIClient(object):
             data=json.dumps(data))
         return ret
 
+    def regenerate_client_secret(self, client_id):
+        """
+        Regenerate client secret of the given client
+        """
+        self.logger.info("Attempting to regenerate '%s' secret...", client_id)
+        headers = self.__get_admin_access_token_headers()
+        client_object = self.get_client_by_clientID(client_id)
+        if client_object:
+            if client_object['protocol'] == 'openid-connect':
+                url = '{0}/admin/realms/{1}/clients/{2}/client-secret'.format(
+                     self.base_url, self.realm, client_object['id'])
+
+                ret = self.send_request(
+                    'post',
+                    url,
+                    headers=headers)
+                self.logger.info("Client '%s' secret regenerated", client_id)
+            else:
+                ret = requests.Response # new empty response
+                ret.text = "Cannot regenerate client '{0}' secret. Client not openid type".format(client_id)
+                self.logger.info(ret.text)
+            return ret
+        else:
+            self.logger.info("Cannot regenerate client '%s' secret. Client not found", client_id)
 
     def delete_client_by_clientID(self, client_id):
         """
@@ -152,7 +176,6 @@ class KeycloakAPIClient(object):
             return ret
         else:
             self.logger.info("Cannot delete '%s'. Client not found", client_id)
-
 
     def get_client_by_clientID(self, client_id):
         """
@@ -329,7 +352,7 @@ class KeycloakAPIClient(object):
         url = '{0}/admin/realms/{1}/clients/{2}/authz/resource-server/permission/scope/{3}'.format(
             self.base_url, self.realm, self.master_realm_client['id'], client_token_exchange_permission['id'])
 
-        # if permission associated with at least one policy -->  decisionStrategy to AFFIRMATIVE instead of UNANIMOUS
+        # if permission associated with at least one policy --> decisionStrategy to AFFIRMATIVE instead of UNANIMOUS
         if len(policies) > 0:
             client_token_exchange_permission['decisionStrategy'] = "AFFIRMATIVE"
 
