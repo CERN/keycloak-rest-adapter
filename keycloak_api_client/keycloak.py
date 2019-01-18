@@ -138,6 +138,43 @@ class KeycloakAPIClient(object):
             data=json.dumps(data))
         return ret
 
+    def update_client_properties(self, client_id, **kwargs):
+        """
+        Update existing client properties
+        kwargs: { "property_name": "new_value", ... , }
+        Returns: Updated client object
+        """
+        headers = self.__get_admin_access_token_headers()
+        client_object = self.get_client_by_clientID(client_id)
+        self.logger.info("Updating client with the following new propeties: {0}".format(kwargs))
+        if client_object:
+            url = '{0}/admin/realms/{1}/clients/{2}'.format(
+                 self.base_url, self.realm, client_object['id'])
+
+            for key in kwargs.iterkeys():
+                if client_object.has_key(key):
+                    if isinstance(client_object[key], type([])): # depending on property type
+                        client_object[key] = []
+                        client_object[key].append(kwargs[key]) # update list
+                    else:
+                       client_object[key] = kwargs[key] # update single property
+                else:
+                    self.logger.error("'{0}' not a valid client property. Client not updated".format(key))
+                    return # not update and return empty client
+
+            ret = self.send_request(
+                'put',
+                url,
+                data=json.dumps(client_object),
+                headers=headers)
+
+            updated_client = self.get_client_by_clientID(client_id)
+            self.logger.info("Client '{0}' updated: {1}".format(client_id, updated_client))
+            return updated_client
+        else:
+            self.logger.info("Cannot update client '%s' properties. Client not found", client_id)
+            return
+
     def regenerate_client_secret(self, client_id):
         """
         Regenerate client secret of the given client
