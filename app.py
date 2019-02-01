@@ -101,6 +101,18 @@ class Client(Resource):
                     target_client_name, requestor_client_name),
                 400)
 
+    @app.route('{0}/client/<clientId>'.format(API_URL_PREFIX), methods=['PUT'])
+    @oidc.accept_token(require_token=True)
+    def client_update(clientId):
+        data = get_request_data(request)
+        updated_client = keycloak_client.update_client_properties(clientId, **data)
+        if updated_client:
+            return json_response(json.dumps(updated_client), 200)
+        else:
+            return json_response(
+                "Cannot update '{0}' properties. Check if client exists or properties are valid".format(clientId),
+                400)
+
     @app.route('{0}/client'.format(API_URL_PREFIX), methods=['POST'])
     @app.route('{0}/client/<protocol>'.format(API_URL_PREFIX), methods=['POST'])
     @oidc.accept_token(require_token=True)
