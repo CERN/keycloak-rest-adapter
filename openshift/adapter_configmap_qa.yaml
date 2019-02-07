@@ -27,17 +27,17 @@ objects:
             }
           },
           {
-                "name": "federation link external”,
-                "protocol": "openid-connect",
-                "protocolMapper": "oidc-usersessionmodel-note-mapper",
-                "consentRequired": false,
-                "config": {
-                  "user.session.note": "identity_provider",
-                  "id.token.claim": "true",
-                  "access.token.claim": "true",
-                  "claim.name": "federationLink",
-                  "jsonType.label": "String"
-                }
+            "name": "federation link external",
+            "protocol": "openid-connect",
+            "protocolMapper": "oidc-usersessionmodel-note-mapper",
+            "consentRequired": false,
+            "config": {
+              "user.session.note": "identity_provider",
+              "id.token.claim": "true",
+              "access.token.claim": "true",
+              "claim.name": "federationLink",
+              "jsonType.label": "String"
+            }
           },
           {
             "name": "username",
@@ -178,21 +178,21 @@ objects:
     flask_oidc_config.json: |
       {
           "web": {
-              "issuer": "https://keycloak-dev-01.cern.ch/auth/realms/master",
-              "auth_uri": "https://keycloak-dev-01.cern.ch/auth/realms/master/protocol/openid-connect/auth",
+              "issuer": "https://keycloak-qa.cern.ch/auth/realms/master",
+              "auth_uri": "https://keycloak-qa.cern.ch/auth/realms/master/protocol/openid-connect/auth",
               "client_id": "keycloak-rest-adapter",
               "client_secret": "${KEYCLOAK_REST_ADAPTER_CLIENT_SECRET}",
               "redirect_uris": [
                   "something.cern.ch"
               ],
               "bearer_only": "true",
-              "token_uri": "https://keycloak-dev-01.cern.ch/auth/realms/master/protocol/openid-connect/token",
-              "token_introspection_uri": "https://keycloak-dev-01.cern.ch/auth/realms/master/protocol/openid-connect/token/introspect"
+              "token_uri": "https://keycloak-qa.cern.ch/auth/realms/master/protocol/openid-connect/token",
+              "token_introspection_uri": "https://keycloak-qa.cern.ch/auth/realms/master/protocol/openid-connect/token/introspect"
           }
       }
     keycloak_client.cfg: |
       [keycloak]
-      server = keycloak-dev-01.cern.ch
+      server = keycloak-qa.cern.ch
       realm = master
       admin_user = admin
       admin_password = ${KEYCLOAK_ADMIN_PASSWORD}

@@ -101,6 +101,18 @@ class Client(Resource):
                     target_client_name, requestor_client_name),
                 400)
 
+    @app.route('{0}/client/<clientId>'.format(API_URL_PREFIX), methods=['PUT'])
+    @oidc.accept_token(require_token=True)
+    def client_update(clientId):
+        data = get_request_data(request)
+        updated_client = keycloak_client.update_client_properties(clientId, **data)
+        if updated_client:
+            return json_response(json.dumps(updated_client), 200)
+        else:
+            return json_response(
+                "Cannot update '{0}' properties. Check if client exists or properties are valid".format(clientId),
+                400)
+
     @app.route('{0}/client'.format(API_URL_PREFIX), methods=['POST'])
     @app.route('{0}/client/<protocol>'.format(API_URL_PREFIX), methods=['POST'])
     @oidc.accept_token(require_token=True)
@@ -129,6 +141,18 @@ class Client(Resource):
 
         new_client = keycloak_client.create_new_client(**data)
         return new_client.text
+
+
+    @app.route('{0}/client/openid/<clientId>/regenerate-secret'.format(API_URL_PREFIX), methods=['POST'])
+    @oidc.accept_token(require_token=True)
+    def client_regenerate_secret(clientId):
+        ret = keycloak_client.regenerate_client_secret(clientId)
+        if ret:
+            return json_response(ret.text, 200)
+        else:
+            return json_response(
+                "Cannot reset '{0}' secret. Client not found".format(clientId),
+                404)
 
     @app.route('{0}/client/<clientId>'.format(API_URL_PREFIX), methods=['DELETE'])
     @app.route('{0}/client/saml/<clientId>'.format(API_URL_PREFIX), methods=['DELETE'])
