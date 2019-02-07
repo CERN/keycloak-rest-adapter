@@ -30,7 +30,7 @@ stages:
   image: gitlab-registry.cern.ch/paas-tools/openshift-client:latest
   script:
     - oc import-image gitlab-registry.cern.ch/${CI_PROJECT_PATH}:${TAG} --confirm --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
-    - oc process --local -f openshift/adapter_configmap.yaml -p KEYCLOAK_ADMIN_PASSWORD=$KEYCLOAK_ADMIN_PASSWORD -p KEYCLOAK_REST_ADAPTER_CLIENT_SECRET=$KEYCLOAK_REST_ADAPTER_CLIENT_SECRET | oc replace -f - --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
+    - oc process --local -f openshift/adapter_configmap_${ENVIRONMENT}.yaml -p KEYCLOAK_ADMIN_PASSWORD=$KEYCLOAK_ADMIN_PASSWORD -p KEYCLOAK_REST_ADAPTER_CLIENT_SECRET=$KEYCLOAK_REST_ADAPTER_CLIENT_SECRET | oc replace -f - --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
     - oc tag --reference-policy=local --source=docker ${CI_REGISTRY_IMAGE}:${TAG} ${RESOURCE}:${TAG} --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
 
 build_docker_dev:
@@ -62,6 +62,7 @@ test:
 deploy_dev:
   <<: *deploy_definition
   variables:
+    ENVIRONMENT: dev
     TOKEN: ${OPENSHIFT_DEV_TOKEN}
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_DEV}
     NAMESPACE: ${NAMESPACE_DEV}
@@ -75,6 +76,7 @@ deploy_dev:
 deploy_qa:
   <<: *deploy_definition
   variables:
+    ENVIRONMENT: qa
     TOKEN: ${OPENSHIFT_QA_TOKEN}
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_PROD}
     NAMESPACE: ${NAMESPACE_QA}
@@ -88,6 +90,7 @@ deploy_qa:
 deploy_prod:
   <<: *deploy_definition
   variables:
+    ENVIRONMENT: prod
     TOKEN: ${OPENSHIFT_PROD_TOKEN}
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_PROD}
     NAMESPACE: ${NAMESPACE_PROD}
