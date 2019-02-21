@@ -3,6 +3,7 @@
 import json
 import sys
 import os
+from xml.etree import ElementTree as ET
 
 from ConfigParser import ConfigParser
 from flask import Flask, make_response
@@ -74,6 +75,15 @@ def get_request_data(request):
     # https://stackoverflow.com/questions/10434599/how-to-get-data-received-in-flask-request/25268170
     return request.form.to_dict() if request.form else request.get_json()
 
+def is_xml(data):
+   """
+   Check if string is XML or not by trying to parse it
+   """
+   try:
+       ET.fromstring(data)
+       return True
+   except ET.ParseError:
+       return False
 
 class Client(Resource):
 
@@ -119,7 +129,6 @@ class Client(Resource):
     def client_create(protocol=None):
         supported_protocols = ['saml', 'openid']
         data = get_request_data(request)
-
         if protocol:
             if protocol not in supported_protocols:
                 return json_response(
@@ -128,18 +137,21 @@ class Client(Resource):
             else:
                 data['protocol'] = protocol
         else:
-            # no clientId nor protocol --> return error
-            if not data or 'clientId' not in data or 'protocol' not in data:
-                return json_response(
-                    "The request is missing the 'clientId' or 'protocol'. They must be passed as a query parameter.",
-                    400)
+            if is_xml(data['clientId']):
+                # if data looks like XML use the client description converteri to create client
+                new_client = keycloak_client.client_description_converter(data['clientId'])
+            else:
+                # no clientId nor protocol --> return error
+                if not data or 'clientId' not in data or 'protocol' not in data:
+                    return json_response(
+                        "The request is missing the 'clientId' or 'protocol'. They must be passed as a query parameter.",
+                        400)
+                if data['protocol'] == "openid" and 'protocolMappers' not in data:
+                    with open(default_openid_protocol_mappers_file) as f:
+                        default_openid_protocol_mappers = json.load(f)
+                    data['protocolMappers'] = default_openid_protocol_mappers['protocolMappers']
 
-        if data['protocol'] == "openid" and 'protocolMappers' not in data:
-            with open(default_openid_protocol_mappers_file) as f:
-                default_openid_protocol_mappers = json.load(f)
-            data['protocolMappers'] = default_openid_protocol_mappers['protocolMappers']
-
-        new_client = keycloak_client.create_new_client(**data)
+                new_client = keycloak_client.create_new_client(**data)
         return new_client.text
 
 
