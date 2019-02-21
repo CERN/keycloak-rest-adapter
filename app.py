@@ -116,7 +116,7 @@ class Client(Resource):
     @app.route('{0}/client'.format(API_URL_PREFIX), methods=['POST'])
     @app.route('{0}/client/<protocol>'.format(API_URL_PREFIX), methods=['POST'])
     @oidc.accept_token(require_token=True)
-    def client_create(protocol):
+    def client_create(protocol=None):
         supported_protocols = ['saml', 'openid']
         data = get_request_data(request)
 
