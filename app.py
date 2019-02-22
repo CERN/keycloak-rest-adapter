@@ -78,6 +78,7 @@ def get_request_data(request):
 def is_xml(data):
    """
    Check if string is XML or not by trying to parse it
+   Empty strings also raise Parse error
    """
    try:
        ET.fromstring(data)
@@ -136,22 +137,26 @@ class Client(Resource):
                     404)
             else:
                 data['protocol'] = protocol
-        else:
+
+        elif data and 'clientId' in data:
             if is_xml(data['clientId']):
-                # if data looks like XML use the client description converteri to create client
+                # if data looks like XML use the client description converter to create client
                 new_client = keycloak_client.client_description_converter(data['clientId'])
             else:
-                # no clientId nor protocol --> return error
-                if not data or 'clientId' not in data or 'protocol' not in data:
+                if 'protocol' in data:
+                    if data['protocol'] == "openid" and 'protocolMappers' not in data:
+                        with open(default_openid_protocol_mappers_file) as f:
+                            default_openid_protocol_mappers = json.load(f)
+                        data['protocolMappers'] = default_openid_protocol_mappers['protocolMappers']
+                    new_client = keycloak_client.create_new_client(**data)
+                else:
                     return json_response(
-                        "The request is missing the 'clientId' or 'protocol'. They must be passed as a query parameter.",
+                        "The request is missing 'protocol'. It must be passed as a query parameter.",
                         400)
-                if data['protocol'] == "openid" and 'protocolMappers' not in data:
-                    with open(default_openid_protocol_mappers_file) as f:
-                        default_openid_protocol_mappers = json.load(f)
-                    data['protocolMappers'] = default_openid_protocol_mappers['protocolMappers']
-
-                new_client = keycloak_client.create_new_client(**data)
+        else:
+            return json_response(
+                "The request is missing 'clientId'. It must be passed as a query parameter.",
+                 400)
         return new_client.text
 
 
