@@ -165,7 +165,7 @@ class Client(Resource):
     def client_regenerate_secret(clientId):
         ret = keycloak_client.regenerate_client_secret(clientId)
         if ret:
-            return json_response(ret.text, 200)
+            return json_response(json.dumps(ret.text), 200)
         else:
             return json_response(
                 "Cannot reset '{0}' secret. Client not found".format(clientId),
