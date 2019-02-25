@@ -64,8 +64,6 @@ keycloak_client = KeycloakAPIClient(keycloak_server, realm, admin_user, admin_pa
 def json_response(data="", status=200, headers=None):
     JSON_MIME_TYPE = "application/json"
     headers = headers or {}
-    if "error" or "error_description" in data:
-        status = 400
     if "Content-Type" not in headers:
         headers["Content-Type"] = JSON_MIME_TYPE
     return make_response(data, status, headers)
@@ -165,7 +163,7 @@ class Client(Resource):
     def client_regenerate_secret(clientId):
         ret = keycloak_client.regenerate_client_secret(clientId)
         if ret:
-            return json_response(json.dumps(ret.text), 200)
+            return json_response(ret.text, 200)
         else:
             return json_response(
                 "Cannot reset '{0}' secret. Client not found".format(clientId),
