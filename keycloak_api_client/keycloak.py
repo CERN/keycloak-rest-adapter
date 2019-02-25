@@ -175,6 +175,21 @@ class KeycloakAPIClient(object):
             self.logger.info("Cannot update client '%s' properties. Client not found", client_id)
             return
 
+    def client_description_converter(self, payload):
+        """
+        Create a new client via its client description (xml or json)
+        payload: XML or JSON definition of the client
+        Returns: New client object
+        """
+        self.logger.info("Attempting to create new client via description converter...")
+        headers = self.__get_admin_access_token_headers()
+
+        url = '{0}/admin/realms/{1}/client-description-converter'.format(
+            self.base_url, self.realm)
+        ret = self.send_request('post', url, headers=headers, data=payload)
+        access_token = headers['Authorization'].split()[1]
+        return self.__create_client(access_token, **json.loads(ret.text))
+
     def regenerate_client_secret(self, client_id):
         """
         Regenerate client secret of the given client
