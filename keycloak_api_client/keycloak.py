@@ -38,7 +38,6 @@ class KeycloakAPIClient(object):
         # http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
         self.session = requests.Session()
         self.session.verify = self.ssl_cert_path
-
         self.logger.info("Client configured to talk to '{0}' server and realm '{1}'".format(self.keycloak_server, self.realm))
         self.access_token_object = None
         self.master_realm_client = self.get_client_by_clientID("master-realm")

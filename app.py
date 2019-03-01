@@ -136,7 +136,7 @@ class Client(Resource):
             else:
                 data["protocol"] = protocol
 
-        elif data and "clientId" in data:
+        if data and "clientId" in data:
             if is_xml(data["clientId"]):
                 # if data looks like XML use the client description converter to create client
                 new_client = keycloak_client.client_description_converter(data["clientId"])
