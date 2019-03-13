@@ -175,9 +175,9 @@ class Client(Resource):
     @oidc.accept_token(require_token=True)
     def client_delete(clientId):
         ret = keycloak_client.delete_client_by_clientID(clientId)
-        if ret:
+        if ret != None:
             return json_response(
-                "Client '{0}' deleted succesfully".format(clientId),
+                "Client '{0}' deleted successfully".format(clientId),
                 200)
         else:
             return json_response(

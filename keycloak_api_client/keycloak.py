@@ -547,6 +547,9 @@ class KeycloakAPIClient(object):
             kwargs['redirectUris'] = []
         if 'attributes' not in kwargs:
             kwargs['attributes'] = {}
+        # by default, create confidential client
+        if "publicClient" not in kwargs:
+            kwargs["publicClient"] = False
         if 'protocol' not in kwargs or kwargs['protocol'] != 'openid-connect':
             # on API level we accept 'openid-connect' & 'openid'. Keycloak only accepts 'openid-connect'
             kwargs['protocol'] = 'openid-connect'
