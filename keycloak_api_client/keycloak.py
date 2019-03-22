@@ -140,6 +140,48 @@ class KeycloakAPIClient(object):
         ret = self.send_request("put", url, headers=headers, data=json.dumps(data))
         return ret
 
+    def update_client_mappers(self, client_id, mapper_name, **kwargs):
+        """
+        Update client mapper
+        kwargs: Only the following mapper attributes can be modified.
+        --> access.token.claim: <bool>,   claim.name:           <string>
+        --> id.token.claim:	<bool>,   jsonType.label:	<type>
+        --> user.attribute:	<string>, userinfo.token.claim: <bool>
+        """
+        headers = self.__get_admin_access_token_headers()
+        self.logger.info("Updating mapper with the following configuration: {0}".format(kwargs))
+        client_object = self.get_client_by_clientID(client_id)
+        if client_object:
+            if 'protocolMappers' in client_object:
+                for mapper in client_object['protocolMappers']:
+                    if mapper['name'] == mapper_name:
+                        url = '{0}/admin/realms/{1}/clients/{2}/protocol-mappers/models/{3}'.format(
+                        self.base_url, self.realm, client_object['id'], mapper['id'])
+                        updated_mapper = mapper
+                        for key in kwargs.iterkeys():
+                            if mapper['config'].has_key(key):
+                                updated_mapper['config'][key] = kwargs[key]
+                            else:
+                                self.logger.error("'{0}' not a valid mapper attribute. Mapper not updated".format(key))
+                                return # not update and return empty
+
+                        ret = self.send_request(
+                                'put',
+                                url,
+                                data=json.dumps(updated_mapper),
+                                headers=headers)
+                        return ret
+
+                self.logger.info("Cannot mapper '{0}' for client '{1}'. Protocol mapper not found".format(mapper_name, client_id))
+                return
+
+            else:
+                self.logger.info("Cannot update client '{0}' mapper. Client mappers not found".format(client_id))
+                return
+        else:
+            self.logger.info("Cannot update client '{0}' mappers. Client not found".format(client_id))
+            return
+
     def update_client_properties(self, client_id, **kwargs):
         """
         Update existing client properties
