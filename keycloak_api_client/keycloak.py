@@ -82,7 +82,7 @@ class KeycloakAPIClient(object):
         elif request_type.lower() == "put":
             ret = self.session.put(url=url, headers=r_headers, **kwargs)
         else:
-            raise Exception("Specified request_type '%s' not supported" % request_type)
+            raise Exception("Specified request_type '{0}' not supported".format(request_type))
         return ret
 
     def send_request(self, request_type, url, **kwargs):
@@ -129,8 +129,7 @@ class KeycloakAPIClient(object):
         status: boolean value to enable/disable permissions
         """
         self.logger.info(
-            "Setting client '%s' fine grain permissions to '%s'", clientid, status
-        )
+            "Setting client '{0}' fine grain permissions to '{1}'".format(clientid, status))
         headers = self.__get_admin_access_token_headers()
         data = {"enabled": status}
         url = "{0}/admin/realms/{1}/clients/{2}/management/permissions".format(
@@ -225,9 +224,7 @@ class KeycloakAPIClient(object):
             )
             return updated_client
         else:
-            self.logger.info(
-                "Cannot update client '%s' properties. Client not found", client_id
-            )
+            self.logger.info("Cannot update client '{0}' properties. Client not found".format(client_id))
             return
 
     def client_description_converter(self, payload):
@@ -250,17 +247,19 @@ class KeycloakAPIClient(object):
         """
         Regenerate client secret of the given client
         """
-        self.logger.info("Attempting to regenerate '%s' secret...", client_id)
+        self.logger.info("Attempting to regenerate '{0}' secret...".format(client_id))
         headers = self.__get_admin_access_token_headers()
         client_object = self.get_client_by_clientID(client_id)
         if client_object:
-            if client_object["protocol"] == "openid-connect":
-                url = "{0}/admin/realms/{1}/clients/{2}/client-secret".format(
-                    self.base_url, self.realm, client_object["id"]
-                )
+            if client_object['protocol'] == 'openid-connect':
+                url = '{0}/admin/realms/{1}/clients/{2}/client-secret'.format(
+                     self.base_url, self.realm, client_object['id'])
 
-                ret = self.send_request("post", url, headers=headers)
-                self.logger.info("Client '%s' secret regenerated", client_id)
+                ret = self.send_request(
+                    'post',
+                    url,
+                    headers=headers)
+                self.logger.info("Client '{0}' secret regenerated".format(client_id))
             else:
                 ret = requests.Response  # new empty response
                 ret.text = "Cannot regenerate client '{0}' secret. Client not openid type".format(
@@ -269,9 +268,7 @@ class KeycloakAPIClient(object):
                 self.logger.info(ret.text)
             return ret
         else:
-            self.logger.info(
-                "Cannot regenerate client '%s' secret. Client not found", client_id
-            )
+            self.logger.info("Cannot regenerate client '{0}' secret. Client not found".format(client_id))
 
     def delete_client_by_clientID(self, client_id):
         """
@@ -284,11 +281,14 @@ class KeycloakAPIClient(object):
                 self.base_url, self.realm, client_object["id"]
             )
 
-            ret = self.send_request("delete", url, headers=headers)
-            self.logger.info("Deleted client '%s'", client_id)
+            ret = self.send_request(
+                'delete',
+                url,
+                headers=headers)
+            self.logger.info("Deleted client '{0}'".format(client_id))
             return ret
         else:
-            self.logger.info("Cannot delete '%s'. Client not found", client_id)
+            self.logger.info("Cannot delete '{0}'. Client not found".format(client_id))
 
     def get_client_by_clientID(self, client_id):
         """
@@ -300,22 +300,22 @@ class KeycloakAPIClient(object):
 
         ret = self.send_request("get", url, headers=headers, params=payload)
 
-        self.logger.info("Getting client '%s' object", client_id)
+        self.logger.info("Getting client '{0}' object".format(client_id))
         client = json.loads(ret.text)
 
         # keycloak returns a list of 1 element if found, empty if not
         if len(client) == 1:
-            self.logger.info("Found client '%s' (%s)", client_id, client[0]["id"])
+            self.logger.info("Found client '{0}' ({1})".format(client_id, client[0]['id']))
             return client[0]
         else:
-            self.logger.info("Client '%s' NOT found", client_id)
+            self.logger.info("Client '{0}' NOT found".format(client_id))
             return client
 
     def get_client_policy_by_name(self, policy_name):
         """
         Get the list of client policies that match the given policy name
         """
-        self.logger.info("Getting policy '%s' object", policy_name)
+        self.logger.info("Getting policy '{0}' object".format(policy_name))
         headers = self.__get_admin_access_token_headers()
         payload = {"name": policy_name}
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/policy".format(
@@ -341,36 +341,30 @@ class KeycloakAPIClient(object):
         Create client policy for the given clientid
         clientid: ID string of the client. E.g: 6781736b-e1f7-4ff7-a883-f4168c4dbd8a
         """
-        self.logger.info(
-            "Creating policy new '%s' for client %s", policy_name, clientid
-        )
+        self.logger.info("Creating policy new '{0}' for client {1}".format(policy_name, clientid))
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/policy/client".format(
             self.base_url, self.realm, self.master_realm_client["id"]
         )
 
-        self.logger.info("Checking if '%s' already exists...", policy_name)
+        self.logger.info("Checking if '{0}' already exists...".format(policy_name))
         client_policy = self.get_client_policy_by_name(policy_name)
 
         if len(client_policy) == 0:
             # create new policy
             self.logger.info(
-                "It does not exist. Creating new policy and subscribing it to client '%s'",
-                clientid,
-            )
-            http_method = "post"
+                "It does not exist. Creating new policy and subscribing it to client '{0}'".format(clientid))
+            http_method = 'post'
             subscribed_clients = [clientid]
 
         else:
             # update already existing policy
             self.logger.info(
-                "There is an exisintg policy with name %s. Updating it to subscribe client '%s'",
-                policy_name,
-                clientid,
-            )
-            url = url + "/{0}".format(client_policy[0]["id"])
-            http_method = "put"
-            subscribed_clients = json.loads(client_policy[0]["config"]["clients"])
+                "There is an exisintg policy with name {0}. Updating it to subscribe client '{1}'".format(policy_name, clientid))
+            url = url + "/{0}".format(client_policy[0]['id'])
+            http_method = 'put'
+            subscribed_clients = json.loads(
+                client_policy[0]['config']['clients'])
             subscribed_clients.append(clientid)
 
         data = {
@@ -393,9 +387,8 @@ class KeycloakAPIClient(object):
         permission_name: authorization permission name to get
         ret: Matching Authorization permission object
         """
-        self.logger.info(
-            "Getting authorization permission '%s' object", permission_name
-        )
+        self.logger.info("Getting authorization permission '{0}' object".format(
+                    permission_name))
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/permission/".format(
             self.base_url, self.realm, self.master_realm_client["id"]
@@ -411,7 +404,7 @@ class KeycloakAPIClient(object):
         policy_name: authorization policy name to get
         ret: Matching Authorization policy object
         """
-        self.logger.info("Getting authorization policy '%s'", policy_name)
+        self.logger.info("Getting authorization policy '{0}'".format(policy_name))
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/policy/".format(
             self.base_url, self.realm, self.master_realm_client["id"]
@@ -427,8 +420,7 @@ class KeycloakAPIClient(object):
         clientid: ID string of the client. E.g: 6781736b-e1f7-4ff7-a883-f4168c4dbd8a
         """
         self.logger.info(
-            "Getting token-exhange permission for client '%s'...", clientid
-        )
+            "Getting token-exhange permission for client '{0}'...".format(clientid))
         token_exchange_permission_name = "token-exchange.permission.client.{0}".format(
             clientid
         )
@@ -469,13 +461,10 @@ class KeycloakAPIClient(object):
         if len(policies) > 0:
             client_token_exchange_permission["decisionStrategy"] = "AFFIRMATIVE"
 
-        client_token_exchange_permission["policies"] = policies
-        client_token_exchange_permission["policies"].append(policy["id"])
-        self.logger.info(
-            "Granting token-exhange between client '%s' and '%s'",
-            target_clientid,
-            requestor_clientid,
-        )
+        client_token_exchange_permission['policies'] = policies
+        client_token_exchange_permission['policies'].append(policy['id'])
+        self.logger.info("Granting token-exhange between client '{0}' and '{1}'".format(
+                    target_clientid, requestor_clientid))
         ret = self.send_request(
             "put",
             url,
