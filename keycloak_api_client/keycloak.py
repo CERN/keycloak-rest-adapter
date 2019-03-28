@@ -139,6 +139,41 @@ class KeycloakAPIClient(object):
         ret = self.send_request("put", url, headers=headers, data=json.dumps(data))
         return ret
 
+    def create_client_mapper(self, client_id, **kwargs):
+        """
+        Create client mapper.
+        kwargs: Each protocol mappers has different values.
+        Example of expected 'oidc-usermodel-attribute-mapper' mapper
+        {  config	{
+            access.token.claim		<bool>
+            aggregate.attrs		<bool>
+            claim.name	        	<string>
+            id.token.claim		<bool>
+            jsonType.label		<type>
+            multivalued	        	<bool>
+            user.attribute		<string>
+            userinfo.token.claim	<bool>
+        }
+        name			<string>
+        protocol		openid-connect
+        protocolMapper		oidc-usermodel-attribute-mapper
+        """
+        headers = self.__get_admin_access_token_headers()
+        self.logger.info("Creating mapper with the following configuration: {0}".format(kwargs))
+        client_object = self.get_client_by_clientID(client_id)
+        if client_object:
+            url = '{0}/admin/realms/{1}/clients/{2}/protocol-mappers/models'.format(
+            self.base_url, self.realm, client_object['id'])
+            ret = self.send_request(
+                    'post',
+                     url,
+                     data=json.dumps(kwargs),
+                     headers=headers)
+            return ret
+        else:
+            self.logger.info("Cannot update client '{0}' mappers. Client not found".format(client_id))
+            return
+
     def update_client_mappers(self, client_id, mapper_name, **kwargs):
         """
         Update client mapper
