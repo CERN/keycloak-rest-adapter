@@ -201,7 +201,7 @@ objects:
 
       [oauth]
       redirect_url=https://test-keycloak-rest-adapter.web.cern.ch/oauth2-redirect.html
-    auth_protocols.json: /
+    auth_protocols.json: |
       {
         "saml": "definition",
         "openid": "clientId"
