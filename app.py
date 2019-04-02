@@ -1,46 +1,48 @@
-#!/usr/bin/env python
-
 import json
-import sys
 import os
-from xml.etree import ElementTree as ET
 
-from ConfigParser import ConfigParser
-from flask import Flask, make_response
+from configparser import ConfigParser
+from flask import (
+    Flask,
+    make_response,
+    request,
+    redirect,
+    url_for,
+    send_from_directory,
+    jsonify,
+)
 from flask_oidc import OpenIDConnect
-from flask_restful import Resource, Api, request
+from flask_restplus import Resource, Api, Namespace, fields
 from keycloak_api_client.keycloak import KeycloakAPIClient
 
+from utils import (
+    json_response,
+    get_request_data,
+    is_xml,
+    validate_protocol,
+    validate_protocol_data,
+    config_dir,
+    SUPPORTED_PROTOCOLS,
+    auth_protocols,
+)
 
-config_dir = os.getcwd()
-privatekey_file = "{0}/config/keycloak-rest-adapter_nopass.key".format(config_dir)
-certificate_file = "{0}/config/keycloak-rest-adapter.crt".format(config_dir)
-keycloakclient_config_file = "{0}/config/keycloak_client.cfg".format(config_dir)
-flask_oidc_client_secrets_file = "{0}/config/flask_oidc_config.json".format(
-    config_dir)
+# Required to have access to keycloak
+os.environ["REQUESTS_CA_BUNDLE"] = os.path.join(
+    "/etc/ssl/certs/", "ca-certificates.crt"
+)
 
-default_openid_protocol_mappers_file = "{0}/config/client_protocol_mappers.json".format(
-    config_dir)
+privatekey_file = "{0}/keycloak-rest-adapter_nopass.key".format(config_dir)
+certificate_file = "{0}/keycloak-rest-adapter.crt".format(config_dir)
+keycloakclient_config_file = "{0}/keycloak_client.cfg".format(config_dir)
+flask_oidc_client_secrets_file = "{0}/flask_oidc_config.json".format(config_dir)
 
-API_VERSION = 1.0
-API_URL_PREFIX = "/api/v%s" % API_VERSION
 
-app = Flask(__name__)
-api = Api(app)
+default_openid_protocol_mappers_file = "{0}/client_protocol_mappers.json".format(
+    config_dir
+)
 
-app.config.update({
-    "SECRET_KEY": "WHATEVER",
-    "TESTING": True,
-    "DEBUG": True,
-    "OIDC-SCOPES": ["openid"],
-    "OIDC_CLIENT_SECRETS": flask_oidc_client_secrets_file,
-    "OIDC_INTROSPECTION_AUTH_METHOD": "client_secret_post",
-    "OIDC_OPENID_REALM": "master",
-    "OIDC_TOKEN_TYPE_HINT": "access_token",
-    "OIDC_RESOURCE_SERVER_ONLY": True,
-})
-
-oidc = OpenIDConnect(app)
+API_VERSION = "v1.0"
+API_URL_PREFIX = "/api/{}".format(API_VERSION)
 
 
 ##################################
@@ -54,142 +56,223 @@ keycloak_server = config.get("keycloak", "server")
 realm = config.get("keycloak", "realm")
 admin_user = config.get("keycloak", "admin_user")
 admin_password = config.get("keycloak", "admin_password")
-client_id = config.get("keycloak", "keycloak-rest-adapter-client")
-client_secret = config.get(
-            "keycloak", "keycloak-rest-adapter-client-secret")
-ssl_cert_path = config.get("keycloak", "ssl_cert_path")
+client_id = config.get("keycloak", "keycloak_rest_adapter_client")
+client_secret = config.get("keycloak", "keycloak_rest_adapter_client_secret")
 
-keycloak_client = KeycloakAPIClient(keycloak_server, realm, admin_user, admin_password, client_id, client_secret, ssl_cert_path)
+keycloak_client = KeycloakAPIClient(
+    keycloak_server, realm, admin_user, admin_password, client_id, client_secret
+)
 
-def json_response(data="", status=200, headers=None):
-    JSON_MIME_TYPE = "application/json"
-    headers = headers or {}
-    if "Content-Type" not in headers:
-        headers["Content-Type"] = JSON_MIME_TYPE
-    return make_response(data, status, headers)
+authorizations = {
+    "oauth2": {
+        "type": "oauth2",
+        "flow": "implicit",
+        "authorizationUrl": "https://{}/auth/realms/master/protocol/openid-connect/auth".format(
+            keycloak_server
+        ),
+        "scopes": {"api": "API access"},
+    }
+}
+
+app = Flask(__name__)
+api = Api(
+    app,
+    version=API_VERSION,
+    title="Keycloak Rest Adapter API",
+    description="A simple Keycloak adapter for handling clients",
+    prefix=API_URL_PREFIX,
+    authorizations=authorizations,
+    security=[{"oauth2": "api"}],
+    doc="/swagger-ui",
+)
 
 
-def get_request_data(request):
-    # https://stackoverflow.com/questions/10434599/how-to-get-data-received-in-flask-request/25268170
-    return request.form.to_dict() if request.form else request.get_json()
+app.config.SWAGGER_UI_OAUTH_REDIRECT_URL = config.get("oauth", "redirect_url")
+app.config.SWAGGER_UI_OAUTH_CLIENT_ID = config.get(
+    "keycloak", "keycloak_rest_adapter_client"
+)
+app.config.SWAGGER_UI_OAUTH_APP_NAME = "Keycloak REST Adapter"
+ns = api.namespace("client", description="Client operations")
 
-def is_xml(data):
-   """
-   Check if string is XML or not by trying to parse it
-   Empty strings also raise Parse error
-   """
-   try:
-       ET.fromstring(data)
-       return True
-   except ET.ParseError:
-       return False
+# Models
+model = ns.model("Payload", {"clientId": fields.String}, required=False)
+token_exchange_payload = ns.model(
+    "TokenExchange", {"target": fields.String, "requestor": fields.String}
+)
 
-class Client(Resource):
+app.config.update(
+    {
+        "SECRET_KEY": "WHATEVER",
+        "TESTING": True,
+        "DEBUG": True,
+        "OIDC-SCOPES": ["openid"],
+        "OIDC_CLIENT_SECRETS": flask_oidc_client_secrets_file,
+        "OIDC_INTROSPECTION_AUTH_METHOD": "client_secret_post",
+        "OIDC_OPENID_REALM": "master",
+        "OIDC_TOKEN_TYPE_HINT": "access_token",
+        "OIDC_RESOURCE_SERVER_ONLY": True,
+    }
+)
 
-    @app.route("{0}/client/token-exchange-permissions".format(API_URL_PREFIX), methods=["POST"])
-    def client_token_exchange_permissions():
+oidc = OpenIDConnect(app)
+
+### Done with the config
+
+
+@app.route("/")
+def index():
+    return redirect("/swagger-ui")
+
+
+@app.route("/oauth2-redirect.html")
+def redirect_oauth():
+    return send_from_directory("static", "oauth2-redirect.html")
+
+
+@ns.route("/token-exchange-permissions")
+class TokenExchangePermissions(Resource):
+    @ns.doc(body=token_exchange_payload)
+    def post(self):
+        """Updates token exchange permissions"""
         data = get_request_data(request)
         if not data or "target" not in data or "requestor" not in data:
             return json_response(
                 "The request is missing 'target' or 'requestor'. They must be passed as a query parameter",
-                400)
+                400,
+            )
         target_client_name = data["target"]
         requestor_client_name = data["requestor"]
 
-        target_client = keycloak_client.get_client_by_clientID(
-            target_client_name)
-        requestor_client = keycloak_client.get_client_by_clientID(
-            requestor_client_name)
+        target_client = keycloak_client.get_client_by_clientID(target_client_name)
+        requestor_client = keycloak_client.get_client_by_clientID(requestor_client_name)
         if target_client and requestor_client:
             ret = keycloak_client.grant_token_exchange_permissions(
-                target_client["id"], requestor_client["id"])
+                target_client["id"], requestor_client["id"]
+            )
             return ret.reason
         else:
             return json_response(
                 "Verify '{0}' and '{1}' exist".format(
-                    target_client_name, requestor_client_name),
-                400)
+                    target_client_name, requestor_client_name
+                ),
+                400,
+            )
 
-    @app.route("{0}/client/<clientId>".format(API_URL_PREFIX), methods=["PUT"])
+
+@ns.route("/<protocol>/<clientId>")
+class ClientDetails(Resource):
+    @ns.doc(body=model)
     @oidc.accept_token(require_token=True)
-    def client_update(clientId):
+    def put(self, protocol, clientId):
+        """Update a client"""
         data = get_request_data(request)
         updated_client = keycloak_client.update_client_properties(clientId, **data)
         if updated_client:
             return json_response(json.dumps(updated_client), 200)
         else:
             return json_response(
-                "Cannot update '{0}' properties. Check if client exists or properties are valid".format(clientId),
-                400)
+                "Cannot update '{0}' properties. Check if client exists or properties are valid".format(
+                    clientId
+                ),
+                400,
+            )
 
-    @app.route("{0}/client".format(API_URL_PREFIX), methods=["POST"])
-    @app.route("{0}/client/<protocol>".format(API_URL_PREFIX), methods=["POST"])
     @oidc.accept_token(require_token=True)
-    def client_create(protocol=None):
-        supported_protocols = ["saml", "openid"]
-        data = get_request_data(request)
-        if protocol:
-            if protocol not in supported_protocols:
-                return json_response(
-                    "Client protocol type '{0}' not suported. Chose between '{1}'".format(protocol, supported_protocols),
-                    404)
-            else:
-                data["protocol"] = protocol
-
-        if data and "clientId" in data:
-            if is_xml(data["clientId"]):
-                # if data looks like XML use the client description converter to create client
-                new_client = keycloak_client.client_description_converter(data["clientId"])
-            else:
-                if "protocol" in data:
-                    if data["protocol"] == "openid" and "protocolMappers" not in data:
-                        with open(default_openid_protocol_mappers_file) as f:
-                            default_openid_protocol_mappers = json.load(f)
-                        data["protocolMappers"] = default_openid_protocol_mappers["protocolMappers"]
-                    new_client = keycloak_client.create_new_client(**data)
-                else:
-                    return json_response(
-                        "The request is missing 'protocol'. It must be passed as a query parameter",
-                        400)
-        else:
-            return json_response(
-                "The request is missing 'clientId'. It must be passed as a query parameter",
-                 400)
-        return new_client.text
-
-
-    @app.route("{0}/client/openid/<clientId>/regenerate-secret".format(API_URL_PREFIX), methods=["POST"])
-    @oidc.accept_token(require_token=True)
-    def client_regenerate_secret(clientId):
-        ret = keycloak_client.regenerate_client_secret(clientId)
-        if ret:
-            return json_response(ret.text, 200)
-        else:
-            return json_response(
-                "Cannot reset '{0}' secret. Client not found".format(clientId),
-                404)
-
-    @app.route("{0}/client/<clientId>".format(API_URL_PREFIX), methods=["DELETE"])
-    @app.route("{0}/client/saml/<clientId>".format(API_URL_PREFIX), methods=["DELETE"])
-    @app.route("{0}/client/openid/<clientId>".format(API_URL_PREFIX), methods=["DELETE"])
-    @oidc.accept_token(require_token=True)
-    def client_delete(clientId):
+    def delete(self, protocol, clientId):
+        """Delete a client"""
+        validation = validate_protocol(protocol)
+        if validation:
+            return validation
         ret = keycloak_client.delete_client_by_clientID(clientId)
         if ret != None:
             return json_response(
-                "Client '{0}' deleted successfully".format(clientId),
-                200)
+                "Client '{0}' deleted successfully".format(clientId), 200
+            )
         else:
             return json_response(
-                "Cannot delete client '{0}'. Client not found".format(clientId),
-                404)
+                "Cannot delete client '{0}'. Client not found".format(clientId), 404
+            )
+
+
+@ns.route("/openid/<clientId>/regenerate-secret")
+class OpenIdRegenerateSecret(Resource):
+    @oidc.accept_token(require_token=True)
+    def post(self, clientId):
+        ret = keycloak_client.regenerate_client_secret(clientId)
+        if ret:
+            return jsonify(ret.json())
+        else:
+            return json_response(
+                "Cannot reset '{0}' secret. Client not found".format(clientId), 404
+            )
+
+
+class CommonCreator(Resource):
+    def common_create(self, data):
+        """
+        Common create method for all the endpoints
+        """
+        protocol = data["protocol"]
+        selected_protocol_id = auth_protocols[protocol]
+        if selected_protocol_id in data:
+            if is_xml(data[selected_protocol_id]):
+                # if data looks like XML use the client description converter to create client
+                new_client = keycloak_client.client_description_converter(
+                    data[selected_protocol_id]
+                )
+            else:
+                if protocol == "openid" and "protocolMappers" not in data:
+                    with open(default_openid_protocol_mappers_file) as f:
+                        default_openid_protocol_mappers = json.load(f)
+                    data["protocolMappers"] = default_openid_protocol_mappers[
+                        "protocolMappers"
+                    ]
+                new_client = keycloak_client.create_new_client(**data)
+        else:
+            return json_response(
+                "The request is missing '{}'. It must be passed as a query parameter".format(
+                    selected_protocol_id
+                ),
+                400,
+            )
+        try:
+            return jsonify(new_client.json())
+        except Exception as ex:
+            return json_response(
+                "Unknown error creating client: {}".format(new_client.text), 400
+            )
+
+
+@ns.route("/<string:protocol>")
+class CreatorDetails(CommonCreator):
+    @ns.doc(body=model)
+    @oidc.accept_token(require_token=True)
+    def post(self, protocol):
+        data = get_request_data(request)
+        data["protocol"] = protocol
+        validation = validate_protocol_data(data)
+        if validation:
+            return validation
+        return self.common_create(data)
+
+
+@ns.route("/")
+class Creator(CommonCreator):
+    @ns.doc(body=model)
+    @oidc.accept_token(require_token=True)
+    def post(self):
+        data = get_request_data(request)
+        validation = validate_protocol_data(data)
+        if validation:
+            return validation
+        return self.common_create(data)
+
 
 if __name__ == "__main__":
     print("** Debug mode should never be used in a production environment! ***")
     app.run(
         host="0.0.0.0",
-        ssl_context=(
-            certificate_file,
-            privatekey_file),
+        ssl_context=(certificate_file, privatekey_file),
         port=8080,
-        debug=True)
+        debug=True,
+    )

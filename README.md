@@ -20,122 +20,21 @@ in this example we will be using python pip.
 Once we have pip installed, we will use it to fulfill the list of dependencies.
 
 ```
-pip install Flask
-pip install Flask-RESTful
-pip install flask_oidc
+pip install -r requirements.txt
 ```
 
-### Actual package installation
+# Docker run 
 
-```python setup.py install```
+To build the docker container:
 
-Example output:
+```bash
+dk build . -t kc-rest 
 ```
-python setup.py install
-running install
-running bdist_egg
-running egg_info
-writing requirements to keycloak_rest_adapter.egg-info/requires.txt
-writing keycloak_rest_adapter.egg-info/PKG-INFO
-writing top-level names to keycloak_rest_adapter.egg-info/top_level.txt
-writing dependency_links to keycloak_rest_adapter.egg-info/dependency_links.txt
-package init file 'keycloak-rest-adapter/__init__.py' not found (or not a regular file)
-reading manifest file 'keycloak_rest_adapter.egg-info/SOURCES.txt'
-writing manifest file 'keycloak_rest_adapter.egg-info/SOURCES.txt'
-installing library code to build/bdist.linux-x86_64/egg
-running install_lib
-running build_py
-copying keycloak-rest-adapter/keycloak_rest_adapter.py -> build/lib/keycloak-rest-adapter
-creating build/bdist.linux-x86_64/egg
-creating build/bdist.linux-x86_64/egg/keycloak-rest-adapter
-copying build/lib/keycloak-rest-adapter/keycloak_rest_adapter.py -> build/bdist.linux-x86_64/egg/keycloak-rest-adapter
-byte-compiling build/bdist.linux-x86_64/egg/keycloak-rest-adapter/keycloak_rest_adapter.py to keycloak_rest_adapter.pyc
-Creating missing __init__.py for keycloak-rest-adapter
-byte-compiling build/bdist.linux-x86_64/egg/keycloak-rest-adapter/__init__.py to __init__.pyc
-creating build/bdist.linux-x86_64/egg/EGG-INFO
-copying keycloak_rest_adapter.egg-info/PKG-INFO -> build/bdist.linux-x86_64/egg/EGG-INFO
-copying keycloak_rest_adapter.egg-info/SOURCES.txt -> build/bdist.linux-x86_64/egg/EGG-INFO
-copying keycloak_rest_adapter.egg-info/dependency_links.txt -> build/bdist.linux-x86_64/egg/EGG-INFO
-copying keycloak_rest_adapter.egg-info/not-zip-safe -> build/bdist.linux-x86_64/egg/EGG-INFO
-copying keycloak_rest_adapter.egg-info/requires.txt -> build/bdist.linux-x86_64/egg/EGG-INFO
-copying keycloak_rest_adapter.egg-info/top_level.txt -> build/bdist.linux-x86_64/egg/EGG-INFO
-creating 'dist/keycloak_rest_adapter-0.1-py2.7.egg' and adding 'build/bdist.linux-x86_64/egg' to it
-removing 'build/bdist.linux-x86_64/egg' (and everything under it)
-Processing keycloak_rest_adapter-0.1-py2.7.egg
-removing '/usr/lib/python2.7/site-packages/keycloak_rest_adapter-0.1-py2.7.egg' (and everything under it)
-creating /usr/lib/python2.7/site-packages/keycloak_rest_adapter-0.1-py2.7.egg
-Extracting keycloak_rest_adapter-0.1-py2.7.egg to /usr/lib/python2.7/site-packages
-keycloak-rest-adapter 0.1 is already the active version in easy-install.pth
 
-Installed /usr/lib/python2.7/site-packages/keycloak_rest_adapter-0.1-py2.7.egg
-Processing dependencies for keycloak-rest-adapter==0.1
-Searching for requests==2.6.0
-Best match: requests 2.6.0
-Adding requests 2.6.0 to easy-install.pth file
+To run it exposing the port:
 
-Using /usr/lib/python2.7/site-packages
-Searching for Flask-RESTful==0.3.6
-Best match: Flask-RESTful 0.3.6
-Processing Flask_RESTful-0.3.6-py2.7.egg
-Flask-RESTful 0.3.6 is already the active version in easy-install.pth
-
-Using /usr/lib/python2.7/site-packages/Flask_RESTful-0.3.6-py2.7.egg
-Searching for Flask==1.0.2
-Best match: Flask 1.0.2
-Processing Flask-1.0.2-py2.7.egg
-Flask 1.0.2 is already the active version in easy-install.pth
-Installing flask script to /usr/bin
-
-Using /usr/lib/python2.7/site-packages/Flask-1.0.2-py2.7.egg
-Searching for pytz==2018.4
-Best match: pytz 2018.4
-Processing pytz-2018.4-py2.7.egg
-pytz 2018.4 is already the active version in easy-install.pth
-
-Using /usr/lib/python2.7/site-packages/pytz-2018.4-py2.7.egg
-Searching for six==1.11.0
-Best match: six 1.11.0
-Adding six 1.11.0 to easy-install.pth file
-
-Using /usr/lib/python2.7/site-packages
-Searching for aniso8601==3.0.0
-Best match: aniso8601 3.0.0
-Processing aniso8601-3.0.0-py2.7.egg
-aniso8601 3.0.0 is already the active version in easy-install.pth
-
-Using /usr/lib/python2.7/site-packages/aniso8601-3.0.0-py2.7.egg
-Searching for click==6.7
-Best match: click 6.7
-Processing click-6.7-py2.7.egg
-click 6.7 is already the active version in easy-install.pth
-
-Using /usr/lib/python2.7/site-packages/click-6.7-py2.7.egg
-Searching for itsdangerous==0.24
-Best match: itsdangerous 0.24
-Processing itsdangerous-0.24-py2.7.egg
-itsdangerous 0.24 is already the active version in easy-install.pth
-
-Using /usr/lib/python2.7/site-packages/itsdangerous-0.24-py2.7.egg
-Searching for Jinja2==2.10
-Best match: Jinja2 2.10
-Processing Jinja2-2.10-py2.7.egg
-Jinja2 2.10 is already the active version in easy-install.pth
-
-Using /usr/lib/python2.7/site-packages/Jinja2-2.10-py2.7.egg
-Searching for Werkzeug==0.14.1
-Best match: Werkzeug 0.14.1
-Processing Werkzeug-0.14.1-py2.7.egg
-Werkzeug 0.14.1 is already the active version in easy-install.pth
-
-Using /usr/lib/python2.7/site-packages/Werkzeug-0.14.1-py2.7.egg
-Searching for MarkupSafe==1.0
-Best match: MarkupSafe 1.0
-Processing MarkupSafe-1.0-py2.7.egg
-MarkupSafe 1.0 is already the active version in easy-install.pth
-
-Using /usr/lib/python2.7/site-packages/MarkupSafe-1.0-py2.7.egg
-Finished processing dependencies for keycloak-rest-adapter==0.1
-
+```bash
+docker run -d --name keycloak-rest-adapter -p 8080:8080 kc-rest
 ```
 
 # Systemdfy service

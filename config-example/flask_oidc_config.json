@@ -4,7 +4,7 @@
         "auth_uri": "https://$KEYCLOAK_FQDN/auth/realms/master/protocol/openid-connect/auth",
         "client_id": "$CLIENT_ID",
         "client_secret": "$CLIENT_SECRET",
-        "redirect_uris":
+        "redirect_uris": [
             "https://$HOSTNAME:5000/*"
         ],
         "bearer_only": "true",

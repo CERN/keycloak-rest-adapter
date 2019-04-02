@@ -1,6 +1,7 @@
-Flask-RESTful==0.3.6
 Flask==1.0.2
 blinker==1.4
 flask_oidc==1.4.0
 gunicorn==19.4.5
 requests==2.6.0
+# We had to fork the repo in order to allow the redirect url to work
+flask-restplus-oauth-redirect

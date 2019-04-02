@@ -1,4 +1,12 @@
 build/
 dist/
 keycloak_rest_adapter.egg-info/
-*.pyc
+*.py[cd]
+
+# Virtualenv
+env
+config
+
+__pycache__
+.pytest*
+.vscode
