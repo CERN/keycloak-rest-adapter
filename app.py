@@ -26,10 +26,13 @@ from utils import (
     auth_protocols,
 )
 
-# Required to have access to keycloak
-os.environ["REQUESTS_CA_BUNDLE"] = os.path.join(
-    "/etc/ssl/certs/", "ca-certificates.crt"
-)
+# Required to have access to keycloak. ca-bundle is on centos
+if os.environ.get("REQUESTS_CA_BUNDLE") is None:
+    certs_base = "/etc/ssl/certs/"
+    ca_certs = os.path.join(certs_base, "ca-certificates.crt")
+    if not os.path.exists(ca_certs):
+        ca_certs = os.path.join(certs_base, "ca-bundle.crt")
+    os.environ["REQUESTS_CA_BUNDLE"] = ca_certs
 
 privatekey_file = "{0}/keycloak-rest-adapter_nopass.key".format(config_dir)
 certificate_file = "{0}/keycloak-rest-adapter.crt".format(config_dir)

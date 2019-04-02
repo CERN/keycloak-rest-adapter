@@ -196,9 +196,14 @@ objects:
       realm = master
       admin_user = admin
       admin_password = ${KEYCLOAK_ADMIN_PASSWORD}
-      keycloak-rest-adapter-client = keycloak-rest-adapter
-      keycloak-rest-adapter-client-secret = ${KEYCLOAK_REST_ADAPTER_CLIENT_SECRET}
+      keycloak_rest_adapter_client = keycloak-rest-adapter
+      keycloak_rest_adapter_client_secret = ${KEYCLOAK_REST_ADAPTER_CLIENT_SECRET}
       ssl_cert_path = /etc/pki/tls/certs/CERN-bundle.pem
+    auth_protocols.json: /
+      {
+        "saml": "definition",
+        "openid": "clientId"
+      }
 
 parameters:
 - description: Keycloak REST Adapter client password

@@ -37,8 +37,8 @@
           realm = ${KEYCLOAK_REALM}
           admin_user = ${KEYCLOAK_ADMIN_USERNAME}
           admin_password = ${KEYCLOAK_ADMIN_USERNAME_PASSWORD}
-          keycloak-rest-adapter-client = ${KEYCLOAK_REST_ADAPTER_CLIENTID}
-          keycloak-rest-adapter-client-secret = ${KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET}
+          keycloak_rest_adapter_client = ${KEYCLOAK_REST_ADAPTER_CLIENTID}
+          keycloak_rest_adapter_client_secret = ${KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET}
           ssl_cert_path = /etc/pki/tls/certs/CERN-bundle.pem
 
 
