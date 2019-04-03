@@ -23,7 +23,9 @@ class KeycloakAPIClient(object):
         admin_user,
         admin_password,
         client_id,
-        client_secret):
+        client_secret,
+        master_realm="master",
+    ):
         """
         Initialize the class with the params needed to use the API.
         config_file: Path to file  with config to instanciate the Keycloak Client
@@ -34,8 +36,9 @@ class KeycloakAPIClient(object):
         self.admin_password = admin_password
         self.client_id = client_id
         self.client_secret = client_secret
+        self.master_realm = master_realm
 
-        self.base_url = "https://%s/auth" % (self.keycloak_server)
+        self.base_url = "{}/auth".format(self.keycloak_server)
         self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
         self.logger = self.__configure_logging()
 
@@ -48,7 +51,7 @@ class KeycloakAPIClient(object):
             )
         )
         self.access_token_object = None
-        self.master_realm_client = self.get_client_by_clientID("master-realm")
+        self.master_realm_client = self.get_client_by_clientID("master-realm", self.master_realm)
 
     def __configure_logging(self):
         """Logging setup
@@ -327,10 +330,12 @@ class KeycloakAPIClient(object):
         else:
             self.logger.info("Cannot delete '{0}'. Client not found".format(client_id))
 
-    def get_client_by_clientID(self, client_id):
+    def get_client_by_clientID(self, client_id, realm=None):
         """
         Get the list of clients that match the given clientID name
         """
+        if not realm:
+            realm = self.realm
         headers = self.__get_admin_access_token_headers()
         payload = {"clientId": client_id, "viewable": True}
         url = "{0}/admin/realms/{1}/clients".format(self.base_url, self.realm)
@@ -557,12 +562,16 @@ class KeycloakAPIClient(object):
         grant_type = "password"
 
         url = "{0}/realms/{1}/protocol/openid-connect/token".format(
-            self.base_url, self.realm
+            self.base_url, self.master_realm
         )
         payload = "client_id={0}&grant_type={1}&username={2}&password={3}".format(
             client_id, grant_type, self.admin_user, self.admin_password
         )
         ret = self.send_request("post", url, data=payload)
+        if ret.status_code != 200:
+            self.logger.error(
+                "Error occured while getting admin token: {}".format(ret.text)
+            )
         return json.loads(ret.text)
 
     def get_access_token(self):
@@ -588,6 +597,10 @@ class KeycloakAPIClient(object):
             client_id, grant_type, client_secret
         )
         r = self.send_request("post", url, data=payload)
+        if r.status_code != 200:
+            self.logger.error(
+                "Error getting client credentials: {}, {}".format(r.status_code, r.text)
+            )
         return json.loads(r.text)
 
     def get_token_exchange_request(

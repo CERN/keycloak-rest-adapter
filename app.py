@@ -66,13 +66,17 @@ keycloak_client = KeycloakAPIClient(
     keycloak_server, realm, admin_user, admin_password, client_id, client_secret
 )
 
+ui_authorization_url = config.get("oauth", "auth_url", fallback=None)
+if not ui_authorization_url:
+    ui_authorization_url = "{}/auth/realms/master/protocol/openid-connect/auth".format(
+        keycloak_server
+    )
+
 authorizations = {
     "oauth2": {
         "type": "oauth2",
         "flow": "implicit",
-        "authorizationUrl": "https://{}/auth/realms/master/protocol/openid-connect/auth".format(
-            keycloak_server
-        ),
+        "authorizationUrl": ui_authorization_url,
         "scopes": {"api": "API access"},
     }
 }
