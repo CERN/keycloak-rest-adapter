@@ -38,7 +38,7 @@ build_docker_dev:
   variables:
     TO: ${CI_REGISTRY_IMAGE}:${DEV_TAG}
   only:
-    - dev 
+    - dev
 
 build_docker_qa:
   <<: *docker_definition

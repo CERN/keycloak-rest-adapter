@@ -144,19 +144,21 @@ class KeycloakAPIClient(object):
         Create client mapper.
         kwargs: Each protocol mappers has different values.
         Example of expected 'oidc-usermodel-attribute-mapper' mapper
-        {  config	{
-            access.token.claim		<bool>
-            aggregate.attrs		<bool>
-            claim.name	        	<string>
-            id.token.claim		<bool>
-            jsonType.label		<type>
-            multivalued	        	<bool>
-            user.attribute		<string>
-            userinfo.token.claim	<bool>
+        {
+          config:  {
+            access.token.claim:		<bool>,
+            aggregate.attrs:		<bool>,
+            claim.name:	        	<string>,
+            id.token.claim:		<bool>,
+            jsonType.label:		<type>,
+            multivalued:	       	<bool>,
+            user.attribute:		<string>,
+            userinfo.token.claim:	<bool>,
+          }
+        name:			<string>,
+        protocol:		openid-connect,
+        protocolMapper:		oidc-usermodel-attribute-mapper
         }
-        name			<string>
-        protocol		openid-connect
-        protocolMapper		oidc-usermodel-attribute-mapper
         """
         headers = self.__get_admin_access_token_headers()
         self.logger.info("Creating mapper with the following configuration: {0}".format(kwargs))

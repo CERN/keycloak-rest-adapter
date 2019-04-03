@@ -1,6 +1,6 @@
 from flask import make_response, jsonify
 import os
-import json 
+import json
 from xml.etree import ElementTree as ET
 
 

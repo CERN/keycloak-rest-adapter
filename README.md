@@ -23,7 +23,7 @@ Once we have pip installed, we will use it to fulfill the list of dependencies.
 pip install -r requirements.txt
 ```
 
-# Docker run 
+# Docker run
 
 To build the docker container:
 
