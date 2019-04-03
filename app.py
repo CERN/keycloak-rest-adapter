@@ -12,7 +12,7 @@ from flask import (
     jsonify,
 )
 from flask_oidc import OpenIDConnect
-from flask_restplus import Resource, Api, Namespace, fields
+from flask_restplus import Resource, Api, Namespace, fields, apidoc
 from keycloak_api_client.keycloak import KeycloakAPIClient
 
 from utils import (
@@ -93,6 +93,18 @@ api = Api(
     doc="/swagger-ui",
 )
 
+class ApiDoc:
+    def __init__(self, title, specs_url):
+        self.title = title
+        self.specs_url = specs_url
+
+@api.documentation
+def custom_ui():
+    specs_url = api.specs_url
+    if config.get("oauth", "https_swagger", fallback=False):
+        specs_url = specs_url.replace('http://', 'https://')
+    return apidoc.ui_for(ApiDoc(api.title, specs_url))
+
 
 app.config.SWAGGER_UI_OAUTH_REDIRECT_URL = config.get("oauth", "redirect_url")
 app.config.SWAGGER_UI_OAUTH_CLIENT_ID = config.get(
@@ -124,7 +136,6 @@ app.config.update(
 oidc = OpenIDConnect(app)
 
 ### Done with the config
-
 
 @app.route("/")
 def index():
