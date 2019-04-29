@@ -93,16 +93,18 @@ api = Api(
     doc="/swagger-ui",
 )
 
+
 class ApiDoc:
     def __init__(self, title, specs_url):
         self.title = title
         self.specs_url = specs_url
 
+
 @api.documentation
 def custom_ui():
     specs_url = api.specs_url
     if config.get("oauth", "https_swagger", fallback=False):
-        specs_url = specs_url.replace('http://', 'https://')
+        specs_url = specs_url.replace("http://", "https://")
     return apidoc.ui_for(ApiDoc(api.title, specs_url))
 
 
@@ -112,6 +114,7 @@ app.config.SWAGGER_UI_OAUTH_CLIENT_ID = config.get(
 )
 app.config.SWAGGER_UI_OAUTH_APP_NAME = "Keycloak REST Adapter"
 ns = api.namespace("client", description="Client operations")
+user_ns = api.namespace("user", description="Methods for handling user operations")
 
 # Models
 model = ns.model("Payload", {"clientId": fields.String}, required=False)
@@ -136,6 +139,7 @@ app.config.update(
 oidc = OpenIDConnect(app)
 
 ### Done with the config
+
 
 @app.route("/")
 def index():
@@ -284,6 +288,22 @@ class Creator(CommonCreator):
         if validation:
             return validation
         return self.common_create(data)
+
+
+@user_ns.route("/logout/<string:user_id>")
+class UserLogout(Resource):
+    @oidc.accept_token(require_token=True)
+    def delete(self, user_id):
+        """
+        Logout the user with the specified user_id from all sessions
+        
+        user_id: the user id (GUID)
+        """
+        if not user_id:
+            return json_response("The request has an invalid 'user_id'", 400)
+        response = keycloak_client.logout_user(user_id)
+        print(response)
+        return json_response(response.text, 200)
 
 
 if __name__ == "__main__":

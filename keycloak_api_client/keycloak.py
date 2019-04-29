@@ -73,6 +73,7 @@ class KeycloakAPIClient(object):
     def __send_request(self, request_type, url, **kwargs):
         # if there is 'headers' in kwargs use it instead of default class one
         r_headers = self.headers.copy()
+        kwargs['verify'] = False
         if "headers" in kwargs:
             r_headers.update(kwargs.pop("headers", None))
 
@@ -643,6 +644,17 @@ class KeycloakAPIClient(object):
             "Creating client '{0}' --> {1}".format(kwargs["clientId"], kwargs)
         )
         return self.send_request("post", url, headers=headers, data=json.dumps(kwargs))
+
+    def logout_user(self, user_id):
+        """
+        Logs out the user from all his sessions
+        """
+        access_token = self.get_access_token()
+        url = '{0}/admin/realms/{1}/users/{2}/logout'.format(
+            self.base_url, self.realm, user_id
+        )
+        self.logger.info("Logging out user ID '{0}'".format(user_id))
+        return self.send_request('post', url)
 
     def create_new_openid_client(self, **kwargs):
         """Add new OPENID client.
