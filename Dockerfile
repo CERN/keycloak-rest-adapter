@@ -4,7 +4,7 @@ COPY . /app
 WORKDIR /app
 
 RUN yum install python36-pip python36-virtualenv -y  && \
-    pip3.6 install -U pip virtualenv && \
+    pip3.6 install -U pip virtualenv==15.1.0 && \
     virtualenv-3.6 /app/venv && \
     /app/venv/bin/pip install --no-cache-dir -r requirements.txt
 
