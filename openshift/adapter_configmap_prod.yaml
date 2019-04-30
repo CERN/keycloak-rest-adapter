@@ -40,7 +40,7 @@ objects:
             }
           },
           {
-            "name": "username",
+            "name": "Unique identifier",
             "protocol": "openid-connect",
             "protocolMapper": "oidc-usermodel-property-mapper",
             "consentRequired": "false",
@@ -49,7 +49,7 @@ objects:
               "user.attribute": "username",
               "id.token.claim": "true",
               "access.token.claim": "true",
-              "claim.name": "preferred_username",
+              "claim.name": "unique_identifier",
               "jsonType.label": "String"
             }
           },
