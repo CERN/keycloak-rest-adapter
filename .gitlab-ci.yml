@@ -13,6 +13,7 @@ variables:
   QA_TAG: qa
   DEV_TAG: dev
   RESOURCE: ${CI_PROJECT_NAME}
+  APP_NAME: ${CI_PROJECT_NAME}
 
 stages:
   - build_docker
@@ -29,7 +30,9 @@ stages:
   stage: deploy
   image: gitlab-registry.cern.ch/paas-tools/openshift-client:latest
   script:
-    - oc import-image gitlab-registry.cern.ch/${CI_PROJECT_PATH}:${TAG} --confirm --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
+    - LOWERCASE_PATH=$(echo ${CI_PROJECT_PATH} | awk '{ print tolower($0) } ')
+    # Adding || true to disable the error message when the image already exists
+    - oc import-image ${APP_NAME} --from="gitlab-registry.cern.ch/${LOWERCASE_PATH}:${TAG}" --confirm --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE} || true 
     - oc process --local -f openshift/adapter_configmap_${ENVIRONMENT}.yaml -p KEYCLOAK_ADMIN_PASSWORD=$KEYCLOAK_ADMIN_PASSWORD -p KEYCLOAK_REST_ADAPTER_CLIENT_SECRET=$KEYCLOAK_REST_ADAPTER_CLIENT_SECRET | oc replace -f - --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
     - oc tag --reference-policy=local --source=docker ${CI_REGISTRY_IMAGE}:${TAG} ${RESOURCE}:${TAG} --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
 
@@ -39,7 +42,7 @@ build_docker_dev:
     TO: ${CI_REGISTRY_IMAGE}:${DEV_TAG}
   only:
     - dev
-
+    
 build_docker_qa:
   <<: *docker_definition
   variables:
