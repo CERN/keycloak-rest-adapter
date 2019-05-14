@@ -192,7 +192,7 @@ objects:
       }
     keycloak_client.cfg: |
       [keycloak]
-      server = keycloak-dev.cern.ch
+      server = https://keycloak-dev.cern.ch
       realm = master
       admin_user = admin
       admin_password = ${KEYCLOAK_ADMIN_PASSWORD}

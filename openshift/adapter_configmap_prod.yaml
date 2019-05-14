@@ -192,14 +192,16 @@ objects:
       }
     keycloak_client.cfg: |
       [keycloak]
-      server = keycloak.cern.ch
+      server = https://keycloak.cern.ch
       realm = master
       admin_user = admin
       admin_password = ${KEYCLOAK_ADMIN_PASSWORD}
       keycloak_rest_adapter_client = keycloak-rest-adapter
       keycloak_rest_adapter_client_secret = ${KEYCLOAK_REST_ADAPTER_CLIENT_SECRET}
-      ssl_cert_path = /etc/pki/tls/certs/CERN-bundle.pem
-    auth_protocols.json: /
+
+      [oauth]
+      redirect_url=https://keycloak-rest-adapter.web.cern.ch/oauth2-redirect.html
+    auth_protocols.json: |
       {
         "saml": "definition",
         "openid": "clientId"
