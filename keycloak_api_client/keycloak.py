@@ -5,7 +5,7 @@ import logging
 import requests
 import ssl
 import sys
-
+from pprint import pprint
 
 class KeycloakAPIClient(object):
 
@@ -237,23 +237,16 @@ class KeycloakAPIClient(object):
             url = "{0}/admin/realms/{1}/clients/{2}".format(
                 self.base_url, self.realm, client_object["id"]
             )
-
-            for key in kwargs.iterkeys():
-                if client_object.has_key(key):
-                    if isinstance(
-                        client_object[key], type([])
-                    ):  # depending on property type
-                        client_object[key] = []
-                        client_object[key].append(kwargs[key])  # update list
-                    else:
-                        client_object[key] = kwargs[key]  # update single property
+            for key, value in kwargs.items():
+                if key in client_object:
+                    pprint("Changing value: {}".format(value))
+                    client_object[key] = value
                 else:
-                    self.logger.error(
-                        "'{0}' not a valid client property. Client not updated".format(
+                    self.logger.warn(
+                        "'{0}' not a valid client property. Skipping...".format(
                             key
                         )
                     )
-                    return  # not update and return empty client
 
             ret = self.send_request(
                 "put", url, data=json.dumps(client_object), headers=headers
