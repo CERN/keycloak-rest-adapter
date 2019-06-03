@@ -190,7 +190,7 @@ class ClientDetails(Resource):
         data = get_request_data(request)
         updated_client = keycloak_client.update_client_properties(clientId, **data)
         if updated_client:
-            return json_response(json.dumps(updated_client), 200)
+            return jsonify(updated_client)
         else:
             return json_response(
                 "Cannot update '{0}' properties. Check if client exists or properties are valid".format(
