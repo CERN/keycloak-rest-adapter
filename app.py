@@ -258,10 +258,10 @@ class CommonCreator(Resource):
                 400,
             )
         try:
-            return jsonify(new_client.json())
+            return jsonify(new_client)
         except Exception as ex:
             return json_response(
-                "Unknown error creating client: {}".format(new_client.text), 400
+                "Unknown error creating client: {}".format(new_client), 400
             )
 
 
