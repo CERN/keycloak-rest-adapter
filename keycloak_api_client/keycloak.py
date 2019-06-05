@@ -665,7 +665,16 @@ class KeycloakAPIClient(object):
         if "protocol" not in kwargs or kwargs["protocol"] != "openid-connect":
             # on API level we accept 'openid-connect' & 'openid'. Keycloak only accepts 'openid-connect'
             kwargs["protocol"] = "openid-connect"
-        return self.__create_client(access_token, **kwargs)
+        response = self.__create_client(access_token, **kwargs)
+        if response.ok:
+            # Hack in order to set consent_required to false if it's actually specified, not just ignore it
+            # See: https://www.keycloak.org/docs/latest/securing_apps/index.html#client-registration-policies 
+            # (Consent Required Policy) section
+            json_response = response.json()
+            update_response = self.update_client_properties(json_response["clientId"], **kwargs)
+            update_response["secret"] = json_response["secret"]
+            return update_response
+        return response.json()
 
     def create_new_saml_client(self, **kwargs):
         """Add new SAML client.
@@ -679,7 +688,7 @@ class KeycloakAPIClient(object):
             kwargs["attributes"] = {}
         if "protocol" not in kwargs or kwargs["protocol"] != "saml":
             kwargs["protocol"] = "saml"
-        return self.__create_client(access_token, **kwargs)
+        return self.__create_client(access_token, **kwargs).json()
 
     def create_new_client(self, **kwargs):
         """Add new client.
