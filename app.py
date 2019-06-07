@@ -308,7 +308,7 @@ class UserLogout(Resource):
 @user_ns.route("/<username>")
 class UserDetails(Resource):
     @user_ns.doc(body=model)
-    #@oidc.accept_token(require_token=True)
+    @oidc.accept_token(require_token=True)
     def put(self, username):
         """Update a user"""
         data = get_request_data(request)
