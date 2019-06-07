@@ -239,7 +239,7 @@ class KeycloakAPIClient(object):
             )
             for key, value in kwargs.items():
                 if key in client_object:
-                    pprint("Changing value: {}".format(value))
+                    self.logger.debug("Changing value: {}".format(value))
                     client_object[key] = value
                 else:
                     self.logger.warn(
@@ -735,7 +735,7 @@ class KeycloakAPIClient(object):
             )
             for key, value in kwargs.items():
                 if key in user_object:
-                    pprint("Changing value: {}".format(value))
+                    self.logger.debug("Changing value: {}".format(value))
                     user_object[key] = value
                 else:
                     self.logger.warn(
