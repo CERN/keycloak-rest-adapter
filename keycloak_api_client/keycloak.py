@@ -239,7 +239,7 @@ class KeycloakAPIClient(object):
             )
             for key, value in kwargs.items():
                 if key in client_object:
-                    pprint("Changing value: {}".format(value))
+                    self.logger.debug("Changing value: {}".format(value))
                     client_object[key] = value
                 else:
                     self.logger.warn(
@@ -332,7 +332,7 @@ class KeycloakAPIClient(object):
             realm = self.realm
         headers = self.__get_admin_access_token_headers()
         payload = {"clientId": client_id, "viewable": True}
-        url = "{0}/admin/realms/{1}/clients".format(self.base_url, self.realm)
+        url = "{0}/admin/realms/{1}/clients".format(self.base_url, realm)
 
         ret = self.send_request("get", url, headers=headers, params=payload)
 
@@ -700,3 +700,58 @@ class KeycloakAPIClient(object):
                 return self.create_new_saml_client(**kwargs)
             elif protocol in ["openid-connect", "openid"]:
                 return self.create_new_openid_client(**kwargs)
+
+    def get_user_by_username(self, username, realm=None):
+        """
+        Get user by userID
+        """
+        if not realm:
+            realm = self.realm
+        headers = self.__get_admin_access_token_headers()
+        url = "{0}/admin/realms/{1}/users?first=0&max=1&search={2}".format(self.base_url, realm, username)
+
+        ret = self.send_request("get", url, headers=headers)
+
+        self.logger.info("Getting user '{0}' object".format(username))
+        user = json.loads(ret.text)
+
+        # keycloak returns a list of 1 element if found, empty if not
+        if len(user) == 1 and user[0]['username'] == username:
+            self.logger.info("Found user '{0}' ({1})".format(username, user[0]['id']))
+            return user[0]
+        else:
+            self.logger.info("User '{0}' NOT found".format(username))
+            return None
+
+    def update_user_properties(self, username, **kwargs):
+        """
+        Update user properties
+        """
+        headers = self.__get_admin_access_token_headers()
+        user_object = self.get_user_by_username(username)
+        if user_object:
+            url = "{0}/admin/realms/{1}/users/{2}".format(
+                self.base_url, self.realm, user_object["id"]
+            )
+            for key, value in kwargs.items():
+                if key in user_object:
+                    self.logger.debug("Changing value: {}".format(value))
+                    user_object[key] = value
+                else:
+                    self.logger.warn(
+                        "'{0}' not a valid client property. Skipping...".format(
+                            key
+                        )
+                    )
+            self.send_request(
+                "put", url, data=json.dumps(user_object), headers=headers
+            )
+
+            updated_user = self.get_user_by_username(username)
+            self.logger.info(
+                "User '{0}' updated: {1}".format(username, updated_user)
+            )
+            return updated_user
+        else:
+            self.logger.info("Cannot update user '{0}' properties. User not found".format(username))
+            return
