@@ -201,6 +201,7 @@ objects:
 
       [oauth]
       redirect_url=https://keycloak-rest-adapter.web.cern.ch/oauth2-redirect.html
+      https_swagger=true
     auth_protocols.json: |
       {
         "saml": "definition",
