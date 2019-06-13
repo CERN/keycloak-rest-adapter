@@ -5,7 +5,7 @@ import logging
 import requests
 import ssl
 import sys
-
+from pprint import pprint
 
 class KeycloakAPIClient(object):
 
@@ -237,23 +237,16 @@ class KeycloakAPIClient(object):
             url = "{0}/admin/realms/{1}/clients/{2}".format(
                 self.base_url, self.realm, client_object["id"]
             )
-
-            for key in kwargs.iterkeys():
-                if client_object.has_key(key):
-                    if isinstance(
-                        client_object[key], type([])
-                    ):  # depending on property type
-                        client_object[key] = []
-                        client_object[key].append(kwargs[key])  # update list
-                    else:
-                        client_object[key] = kwargs[key]  # update single property
+            for key, value in kwargs.items():
+                if key in client_object:
+                    self.logger.debug("Changing value: {}".format(value))
+                    client_object[key] = value
                 else:
-                    self.logger.error(
-                        "'{0}' not a valid client property. Client not updated".format(
+                    self.logger.warn(
+                        "'{0}' not a valid client property. Skipping...".format(
                             key
                         )
                     )
-                    return  # not update and return empty client
 
             ret = self.send_request(
                 "put", url, data=json.dumps(client_object), headers=headers
@@ -339,7 +332,7 @@ class KeycloakAPIClient(object):
             realm = self.realm
         headers = self.__get_admin_access_token_headers()
         payload = {"clientId": client_id, "viewable": True}
-        url = "{0}/admin/realms/{1}/clients".format(self.base_url, self.realm)
+        url = "{0}/admin/realms/{1}/clients".format(self.base_url, realm)
 
         ret = self.send_request("get", url, headers=headers, params=payload)
 
@@ -672,7 +665,16 @@ class KeycloakAPIClient(object):
         if "protocol" not in kwargs or kwargs["protocol"] != "openid-connect":
             # on API level we accept 'openid-connect' & 'openid'. Keycloak only accepts 'openid-connect'
             kwargs["protocol"] = "openid-connect"
-        return self.__create_client(access_token, **kwargs)
+        response = self.__create_client(access_token, **kwargs)
+        if response.ok:
+            # Hack in order to set consent_required to false if it's actually specified, not just ignore it
+            # See: https://www.keycloak.org/docs/latest/securing_apps/index.html#client-registration-policies 
+            # (Consent Required Policy) section
+            json_response = response.json()
+            update_response = self.update_client_properties(json_response["clientId"], **kwargs)
+            update_response["secret"] = json_response["secret"]
+            return update_response
+        return response.json()
 
     def create_new_saml_client(self, **kwargs):
         """Add new SAML client.
@@ -686,7 +688,7 @@ class KeycloakAPIClient(object):
             kwargs["attributes"] = {}
         if "protocol" not in kwargs or kwargs["protocol"] != "saml":
             kwargs["protocol"] = "saml"
-        return self.__create_client(access_token, **kwargs)
+        return self.__create_client(access_token, **kwargs).json()
 
     def create_new_client(self, **kwargs):
         """Add new client.
@@ -698,3 +700,58 @@ class KeycloakAPIClient(object):
                 return self.create_new_saml_client(**kwargs)
             elif protocol in ["openid-connect", "openid"]:
                 return self.create_new_openid_client(**kwargs)
+
+    def get_user_by_username(self, username, realm=None):
+        """
+        Get user by userID
+        """
+        if not realm:
+            realm = self.realm
+        headers = self.__get_admin_access_token_headers()
+        url = "{0}/admin/realms/{1}/users?first=0&max=1&search={2}".format(self.base_url, realm, username)
+
+        ret = self.send_request("get", url, headers=headers)
+
+        self.logger.info("Getting user '{0}' object".format(username))
+        user = json.loads(ret.text)
+
+        # keycloak returns a list of 1 element if found, empty if not
+        if len(user) == 1 and user[0]['username'] == username:
+            self.logger.info("Found user '{0}' ({1})".format(username, user[0]['id']))
+            return user[0]
+        else:
+            self.logger.info("User '{0}' NOT found".format(username))
+            return None
+
+    def update_user_properties(self, username, **kwargs):
+        """
+        Update user properties
+        """
+        headers = self.__get_admin_access_token_headers()
+        user_object = self.get_user_by_username(username)
+        if user_object:
+            url = "{0}/admin/realms/{1}/users/{2}".format(
+                self.base_url, self.realm, user_object["id"]
+            )
+            for key, value in kwargs.items():
+                if key in user_object:
+                    self.logger.debug("Changing value: {}".format(value))
+                    user_object[key] = value
+                else:
+                    self.logger.warn(
+                        "'{0}' not a valid client property. Skipping...".format(
+                            key
+                        )
+                    )
+            self.send_request(
+                "put", url, data=json.dumps(user_object), headers=headers
+            )
+
+            updated_user = self.get_user_by_username(username)
+            self.logger.info(
+                "User '{0}' updated: {1}".format(username, updated_user)
+            )
+            return updated_user
+        else:
+            self.logger.info("Cannot update user '{0}' properties. User not found".format(username))
+            return

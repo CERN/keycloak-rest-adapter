@@ -190,7 +190,7 @@ class ClientDetails(Resource):
         data = get_request_data(request)
         updated_client = keycloak_client.update_client_properties(clientId, **data)
         if updated_client:
-            return json_response(json.dumps(updated_client), 200)
+            return jsonify(updated_client)
         else:
             return json_response(
                 "Cannot update '{0}' properties. Check if client exists or properties are valid".format(
@@ -258,10 +258,10 @@ class CommonCreator(Resource):
                 400,
             )
         try:
-            return jsonify(new_client.json())
+            return jsonify(new_client)
         except Exception as ex:
             return json_response(
-                "Unknown error creating client: {}".format(new_client.text), 400
+                "Unknown error creating client: {}".format(new_client), 400
             )
 
 
@@ -305,6 +305,23 @@ class UserLogout(Resource):
         print(response)
         return json_response(response.text, 200)
 
+@user_ns.route("/<username>")
+class UserDetails(Resource):
+    @user_ns.doc(body=model)
+    @oidc.accept_token(require_token=True)
+    def put(self, username):
+        """Update a user"""
+        data = get_request_data(request)
+        updated_user = keycloak_client.update_user_properties(username, **data)
+        if updated_user:
+            return jsonify(updated_user)
+        else:
+            return json_response(
+                "Cannot update '{0}' properties. Check if client exists or properties are valid".format(
+                    username
+                ),
+                400,
+            )
 
 if __name__ == "__main__":
     print("** Debug mode should never be used in a production environment! ***")
