@@ -154,6 +154,7 @@ def redirect_oauth():
 @ns.route("/token-exchange-permissions")
 class TokenExchangePermissions(Resource):
     @ns.doc(body=token_exchange_payload)
+    @oidc.accept_token(require_token=True)
     def post(self):
         """Updates token exchange permissions"""
         data = get_request_data(request)
