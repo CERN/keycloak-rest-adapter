@@ -662,6 +662,9 @@ class KeycloakAPIClient(object):
         # by default, create confidential client
         if "publicClient" not in kwargs:
             kwargs["publicClient"] = False
+        # by default don't require consent to login (it's hardcoded to true in keycloak)
+        if "consentRequired" not in kwargs:
+            kwargs["consentRequired"] = False
         if "protocol" not in kwargs or kwargs["protocol"] != "openid-connect":
             # on API level we accept 'openid-connect' & 'openid'. Keycloak only accepts 'openid-connect'
             kwargs["protocol"] = "openid-connect"
