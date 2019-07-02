@@ -243,6 +243,14 @@ class CommonCreator(Resource):
                 new_client = keycloak_client.client_description_converter(
                     data[selected_protocol_id]
                 )
+                if not new_client.ok:
+                    return json_response(
+                        "Unable to create SAML client. Details: {}".format(
+                            new_client.json()
+                        ),
+                        400,
+                    )
+                new_client = new_client.json()
             else:
                 if protocol == "openid" and "protocolMappers" not in data:
                     with open(default_openid_protocol_mappers_file) as f:
@@ -306,6 +314,7 @@ class UserLogout(Resource):
         print(response)
         return json_response(response.text, 200)
 
+
 @user_ns.route("/<username>")
 class UserDetails(Resource):
     @user_ns.doc(body=model)
@@ -323,6 +332,7 @@ class UserDetails(Resource):
                 ),
                 400,
             )
+
 
 if __name__ == "__main__":
     print("** Debug mode should never be used in a production environment! ***")
