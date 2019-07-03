@@ -77,7 +77,6 @@ authorizations = {
         "type": "oauth2",
         "flow": "implicit",
         "authorizationUrl": ui_authorization_url,
-        "scopes": {"api": "API access"},
     }
 }
 
@@ -182,13 +181,15 @@ class TokenExchangePermissions(Resource):
             )
 
 
-@ns.route("/<protocol>/<clientId>")
+@ns.route("/<protocol>/<path:clientId>")
 class ClientDetails(Resource):
     @ns.doc(body=model)
     @oidc.accept_token(require_token=True)
     def put(self, protocol, clientId):
         """Update a client"""
         data = get_request_data(request)
+        if (protocol == "saml") and ("definition" in data):
+            data = keycloak_client.client_description_converter(data["definition"])
         updated_client = keycloak_client.update_client_properties(clientId, **data)
         if updated_client:
             return jsonify(updated_client)
@@ -217,7 +218,7 @@ class ClientDetails(Resource):
             )
 
 
-@ns.route("/openid/<clientId>/regenerate-secret")
+@ns.route("/openid/<string:clientId>/regenerate-secret")
 class OpenIdRegenerateSecret(Resource):
     @oidc.accept_token(require_token=True)
     def post(self, clientId):
@@ -240,17 +241,10 @@ class CommonCreator(Resource):
         if selected_protocol_id in data:
             if is_xml(data[selected_protocol_id]):
                 # if data looks like XML use the client description converter to create client
-                new_client = keycloak_client.client_description_converter(
+                client_description = keycloak_client.client_description_converter(
                     data[selected_protocol_id]
                 )
-                if not new_client.ok:
-                    return json_response(
-                        "Unable to create SAML client. Details: {}".format(
-                            new_client.json()
-                        ),
-                        400,
-                    )
-                new_client = new_client.json()
+                new_client = keycloak_client.create_new_client(**client_description)
             else:
                 if protocol == "openid" and "protocolMappers" not in data:
                     with open(default_openid_protocol_mappers_file) as f:
