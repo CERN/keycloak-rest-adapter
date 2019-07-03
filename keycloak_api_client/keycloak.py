@@ -198,7 +198,7 @@ class KeycloakAPIClient(object):
                         url = '{0}/admin/realms/{1}/clients/{2}/protocol-mappers/models/{3}'.format(
                         self.base_url, self.realm, client_object['id'], mapper['id'])
                         updated_mapper = mapper
-                        for key in kwargs.iterkeys():
+                        for key in kwargs:
                             if mapper['config'].has_key(key):
                                 updated_mapper['config'][key] = kwargs[key]
                             else:
@@ -251,6 +251,8 @@ class KeycloakAPIClient(object):
             ret = self.send_request(
                 "put", url, data=json.dumps(client_object), headers=headers
             )
+            if "clientId" in kwargs:
+                client_id = kwargs["clientId"]
 
             updated_client = self.get_client_by_clientID(client_id)
             self.logger.info(
@@ -265,7 +267,7 @@ class KeycloakAPIClient(object):
         """
         Create a new client via its client description (xml or json)
         payload: XML or JSON definition of the client
-        Returns: New client object
+        Returns: Client description parsed as a dict
         """
         self.logger.info("Attempting to create new client via description converter...")
         headers = self.__get_admin_access_token_headers()
@@ -274,8 +276,7 @@ class KeycloakAPIClient(object):
             self.base_url, self.realm
         )
         ret = self.send_request("post", url, headers=headers, data=payload)
-        access_token = headers["Authorization"].split()[1]
-        return self.__create_client(access_token, **json.loads(ret.text))
+        return json.loads(ret.text)
 
     def regenerate_client_secret(self, client_id):
         """
@@ -535,7 +536,7 @@ class KeycloakAPIClient(object):
         """
         self.logger.info("Refreshing admin access token")
         grant_type = "refresh_token"
-        refresh_token = access_token_object["refresh_token"]
+        refresh_token = self.access_token_object["refresh_token"]
 
         url = "{0}/realms/{1}/protocol/openid-connect/token".format(
             self.base_url, self.realm
