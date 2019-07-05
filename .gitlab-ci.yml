@@ -65,9 +65,10 @@ test:
 deploy_dev:
   <<: *deploy_definition
   variables:
+    KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD_DEV}
     ENVIRONMENT: dev
-    TOKEN: ${OPENSHIFT_DEV_TOKEN}
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_DEV}
+    TOKEN: ${OPENSHIFT_DEV_TOKEN}
     NAMESPACE: ${NAMESPACE_DEV}
     TAG: ${DEV_TAG}
   environment:
@@ -79,6 +80,7 @@ deploy_dev:
 deploy_qa:
   <<: *deploy_definition
   variables:
+    KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD_QA}
     ENVIRONMENT: qa
     TOKEN: ${OPENSHIFT_QA_TOKEN}
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_PROD}
@@ -93,6 +95,7 @@ deploy_qa:
 deploy_prod:
   <<: *deploy_definition
   variables:
+    KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD_PROD}
     ENVIRONMENT: prod
     TOKEN: ${OPENSHIFT_PROD_TOKEN}
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_PROD}
