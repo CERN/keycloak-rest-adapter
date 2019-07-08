@@ -39,11 +39,6 @@ certificate_file = "{0}/keycloak-rest-adapter.crt".format(config_dir)
 keycloakclient_config_file = "{0}/keycloak_client.cfg".format(config_dir)
 flask_oidc_client_secrets_file = "{0}/flask_oidc_config.json".format(config_dir)
 
-
-default_openid_protocol_mappers_file = "{0}/client_protocol_mappers.json".format(
-    config_dir
-)
-
 API_VERSION = "v1.0"
 API_URL_PREFIX = "/api/{}".format(API_VERSION)
 
@@ -244,10 +239,17 @@ class CommonCreator(Resource):
                 client_description = keycloak_client.client_description_converter(
                     data[selected_protocol_id]
                 )
+                # load saml protocol mappers
+                with open("{0}/client_{1}_protocol_mappers.json".format(config_dir, protocol)) as f:
+                    default_saml_protocol_mappers = json.load(f)
+                client_description["protocolMappers"] = default_saml_protocol_mappers[
+                    "protocolMappers"
+                ]
                 new_client = keycloak_client.create_new_client(**client_description)
             else:
                 if protocol == "openid" and "protocolMappers" not in data:
-                    with open(default_openid_protocol_mappers_file) as f:
+                    # if not protocolMappers load default openid protocol mappers
+                    with open("{0}/client_{1}_protocol_mappers.json".format(config_dir, protocol)) as f:
                         default_openid_protocol_mappers = json.load(f)
                     data["protocolMappers"] = default_openid_protocol_mappers[
                         "protocolMappers"
