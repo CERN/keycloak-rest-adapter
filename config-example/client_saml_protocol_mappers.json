@@ -1,0 +1,87 @@
+{
+  "protocolMappers":[
+    {
+      "name":"lastName",
+      "protocol":"saml",
+      "protocolMapper":"saml-user-property-mapper",
+      "consentRequired":false,
+      "config":{
+        "attribute.nameformat":"URI Reference",
+        "user.attribute":"lastName",
+        "friendly.name":"Lastname",
+        "attribute.name":"http://schemas.xmlsoap.org/claims/Lastname"
+      }
+    },
+    {
+      "name":"firstName",
+      "protocol":"saml",
+      "protocolMapper":"saml-user-property-mapper",
+      "consentRequired":false,
+      "config":{
+        "attribute.nameformat":"URI Reference",
+        "user.attribute":"firstName",
+        "friendly.name":"Firstname",
+        "attribute.name":"http://schemas.xmlsoap.org/claims/Firstname"
+      }
+    },
+    {
+      "name":"email",
+      "protocol":"saml",
+      "protocolMapper":"saml-user-property-mapper",
+      "consentRequired":false,
+      "config":{
+        "attribute.nameformat":"URI Reference",
+        "user.attribute":"email",
+        "friendly.name":"EmailAddress",
+        "attribute.name":"http://schemas.xmlsoap.org/claims/EmailAddress"
+      }
+    },
+    {
+      "name":"userPrincipalName",
+      "protocol":"saml",
+      "protocolMapper":"saml-user-attribute-mapper",
+      "consentRequired":false,
+      "config":{
+        "attribute.nameformat":"URI Reference",
+        "user.attribute":"userPrincipalName",
+        "friendly.name":"userPrincipalName",
+        "attribute.name":"http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn"
+      }
+    },
+    {
+      "name":"CernRole",
+      "protocol":"saml",
+      "protocolMapper":"saml-roles-cern-mapper",
+      "consentRequired":false,
+      "config":{
+        "attribute.nameformat":"Basic",
+        "friendly.name":"CernRole",
+        "attribute.name":"CernRole"
+      }
+    },
+    {
+      "name":"displayName",
+      "protocol":"saml",
+      "protocolMapper":"saml-user-attribute-mapper",
+      "consentRequired":false,
+      "config":{
+        "attribute.nameformat":"URI Reference",
+        "user.attribute":"displayName",
+        "friendly.name":"displayName",
+        "attribute.name":"http://schemas.xmlsoap.org/claims/DisplayName"
+      }
+    },
+    {
+      "name":"username",
+      "protocol":"saml",
+      "protocolMapper":"saml-user-property-mapper",
+      "consentRequired":false,
+      "config":{
+        "attribute.nameformat":"URI Reference",
+        "user.attribute":"username",
+        "friendly.name":"CommonName",
+        "attribute.name":"http://schemas.xmlsoap.org/claims/CommonName"
+      }
+    }
+  ]
+}
