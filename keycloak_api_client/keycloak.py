@@ -486,6 +486,37 @@ class KeycloakAPIClient(object):
         self.create_client_policy(requestor_clientid, policy_name, policy_description)
         policy = self.get_client_policy_by_name(policy_name)[0]
 
+        self.logger.info("Granting token-exhange between client '{0}' and '{1}'".format(
+                    target_clientid, requestor_clientid))
+        policies.append(policy['id'])
+        return self.update_token_exchange_permissions(client_token_exchange_permission, policies)
+
+    def revoke_token_exchange_permissions(self, target_clientid, requestor_clientid):
+        """
+        Revoke token-exchange permission for target client to destination client
+        target_clientid: ID string of the target client. E.g: 6781736b-e1f7-4ff7-a883-f4168c4dbd8a
+        requestor_clientid: ID string of the client to exchange its token for target_clientid E.g: 6781736b-e1f7-4ff7-a883-f4168c4dbd8a
+        """
+        client_token_exchange_permission = self.get_client_token_exchange_permission(
+            target_clientid
+        )
+        tep_associated_policies = self.get_permission_associated_policies(
+            client_token_exchange_permission["id"]
+        )
+        policies = [policy["id"] for policy in tep_associated_policies]
+        policy_name = "allow token exchange for {0}".format(requestor_clientid)
+        policy = self.get_client_policy_by_name(policy_name)[0]
+        try:
+            policies.remove(policy['id'])
+        except ValueError:
+            raise ValueError("Token exchange permissions not found between client '{0}' and '{1}'".format(
+                    target_clientid, requestor_clientid))
+                    
+        self.logger.info("Revoking token-exhange between client '{0}' and '{1}'".format(
+                    target_clientid, requestor_clientid))
+        return self.update_token_exchange_permissions(client_token_exchange_permission, policies)
+
+    def update_token_exchange_permissions(self, client_token_exchange_permission, policies):
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/permission/scope/{3}".format(
             self.base_url,
@@ -493,15 +524,11 @@ class KeycloakAPIClient(object):
             self.master_realm_client["id"],
             client_token_exchange_permission["id"],
         )
-
         # if permission associated with at least one policy --> decisionStrategy to AFFIRMATIVE instead of UNANIMOUS
         if len(policies) > 0:
             client_token_exchange_permission["decisionStrategy"] = "AFFIRMATIVE"
 
         client_token_exchange_permission['policies'] = policies
-        client_token_exchange_permission['policies'].append(policy['id'])
-        self.logger.info("Granting token-exhange between client '{0}' and '{1}'".format(
-                    target_clientid, requestor_clientid))
         ret = self.send_request(
             "put",
             url,
