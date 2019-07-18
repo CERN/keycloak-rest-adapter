@@ -142,7 +142,7 @@ def redirect_oauth():
     return send_from_directory("static", "oauth2-redirect.html")
 
 
-@ns.route("/<path:target_client_id>/token-exchange-permissions/<path:requestor_client_id>")
+@ns.route("/openid/<path:target_client_id>/token-exchange-permissions/<path:requestor_client_id>")
 class TokenExchangePermissions(Resource):
     @oidc.accept_token(require_token=True)
     def put(self, target_client_id, requestor_client_id):
