@@ -466,8 +466,8 @@ class KeycloakAPIClient(object):
     def grant_token_exchange_permissions(self, target_clientid, requestor_clientid):
         """
         Grant token-exchange permission for target client to destination client
-        target_clientid: ID string of the target client. E.g: 6781736b-e1f7-4ff7-a883-f4168c4dbd8a
-        requestor_clientid: ID string of the client to exchange its token for target_clientid E.g: 6781736b-e1f7-4ff7-a883-f4168c4dbd8a
+        target_clientid: ID string of the target client. E.g: myapp-foo
+        requestor_clientid: ID string of the client to exchange its token for target_clientid E.g: myapp-bar
         """
         self.set_client_fine_grain_permission(target_clientid, True)
         client_token_exchange_permission = self.get_client_token_exchange_permission(
@@ -494,8 +494,8 @@ class KeycloakAPIClient(object):
     def revoke_token_exchange_permissions(self, target_clientid, requestor_clientid):
         """
         Revoke token-exchange permission for target client to destination client
-        target_clientid: ID string of the target client. E.g: 6781736b-e1f7-4ff7-a883-f4168c4dbd8a
-        requestor_clientid: ID string of the client to exchange its token for target_clientid E.g: 6781736b-e1f7-4ff7-a883-f4168c4dbd8a
+        target_clientid: ID string of the target client. E.g: myapp-foo
+        requestor_clientid: ID string of the client to exchange its token for target_clientid E.g: myapp-bar
         """
         client_token_exchange_permission = self.get_client_token_exchange_permission(
             target_clientid
