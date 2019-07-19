@@ -112,9 +112,6 @@ user_ns = api.namespace("user", description="Methods for handling user operation
 
 # Models
 model = ns.model("Payload", {"clientId": fields.String}, required=False)
-token_exchange_payload = ns.model(
-    "TokenExchange", {"target": fields.String, "requestor": fields.String}
-)
 
 app.config.update(
     {
@@ -145,34 +142,55 @@ def redirect_oauth():
     return send_from_directory("static", "oauth2-redirect.html")
 
 
-@ns.route("/token-exchange-permissions")
+@ns.route("/openid/<path:target_client_id>/token-exchange-permissions/<path:requestor_client_id>")
 class TokenExchangePermissions(Resource):
-    @ns.doc(body=token_exchange_payload)
     @oidc.accept_token(require_token=True)
-    def post(self):
-        """Updates token exchange permissions"""
-        data = get_request_data(request)
-        if not data or "target" not in data or "requestor" not in data:
-            return json_response(
-                "The request is missing 'target' or 'requestor'. They must be passed as a query parameter",
-                400,
-            )
-        target_client_name = data["target"]
-        requestor_client_name = data["requestor"]
+    def put(self, target_client_id, requestor_client_id):
+        """Grants token exchange permissions"""
+        target_client = keycloak_client.get_client_by_clientID(target_client_id)
+        requestor_client = keycloak_client.get_client_by_clientID(requestor_client_id)
 
-        target_client = keycloak_client.get_client_by_clientID(target_client_name)
-        requestor_client = keycloak_client.get_client_by_clientID(requestor_client_name)
-        if target_client and requestor_client:
-            ret = keycloak_client.grant_token_exchange_permissions(
+        verify_error = self.__verify_clients(target_client, requestor_client, target_client_id, requestor_client_id)
+        if verify_error:
+            return verify_error
+
+        ret = keycloak_client.grant_token_exchange_permissions(
+            target_client["id"], requestor_client["id"]
+        )
+        if ret.status_code == 200 or ret.status_code == 201:
+            return ret.reason, 200
+        else:
+            return ret.reason, 400
+
+    @oidc.accept_token(require_token=True)
+    def delete(self, target_client_id, requestor_client_id):
+        """Revokes token exchange permissions"""
+        target_client = keycloak_client.get_client_by_clientID(target_client_id)
+        requestor_client = keycloak_client.get_client_by_clientID(requestor_client_id)
+
+        verify_error = self.__verify_clients(target_client, requestor_client, target_client_id, requestor_client_id)
+        if verify_error:
+            return verify_error
+        try:
+            ret = keycloak_client.revoke_token_exchange_permissions(
                 target_client["id"], requestor_client["id"]
             )
-            return ret.reason
+        except ValueError as e:
+            return e.args[0], 404
+        if ret.status_code == 200 or ret.status_code == 201:
+            return "Deleted", 200
+        else:
+            return ret.reason, 400
+
+    def __verify_clients(self, target_client, requestor_client, target_client_name, requestor_client_name):
+        if target_client and requestor_client:
+            return False
         else:
             return json_response(
                 "Verify '{0}' and '{1}' exist".format(
                     target_client_name, requestor_client_name
                 ),
-                400,
+                404,
             )
 
 
@@ -307,7 +325,6 @@ class UserLogout(Resource):
         if not user_id:
             return json_response("The request has an invalid 'user_id'", 400)
         response = keycloak_client.logout_user(user_id)
-        print(response)
         return json_response(response.text, 200)
 
 
