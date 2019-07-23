@@ -238,7 +238,7 @@ class KeycloakAPIClient(object):
                 self.base_url, self.realm, client_object["id"]
             )
             for key, value in kwargs.items():
-                if key in client_object:
+                if key in client_object or key == "description":
                     self.logger.debug("Changing value: {}".format(value))
                     client_object[key] = value
                 else:
