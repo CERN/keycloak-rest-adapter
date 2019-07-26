@@ -1,5 +1,4 @@
 variables:
-
   KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
   KEYCLOAK_REST_ADAPTER_CLIENT_SECRET: ${KEYCLOAK_REST_ADAPTER_CLIENT_SECRET}
   NAMESPACE_DEV: test-keycloak-rest-adapter
@@ -16,8 +15,8 @@ variables:
   APP_NAME: ${CI_PROJECT_NAME}
 
 stages:
-  - build_docker
   - test
+  - build_docker
   - deploy
 
 .docker_build_template: &docker_definition
@@ -32,9 +31,29 @@ stages:
   script:
     - LOWERCASE_PATH=$(echo ${CI_PROJECT_PATH} | awk '{ print tolower($0) } ')
     # Adding || true to disable the error message when the image already exists
-    - oc import-image ${APP_NAME} --from="gitlab-registry.cern.ch/${LOWERCASE_PATH}:${TAG}" --confirm --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE} || true 
+    - oc import-image ${APP_NAME} --from="gitlab-registry.cern.ch/${LOWERCASE_PATH}:${TAG}" --confirm --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE} || true
     - oc process --local -f openshift/adapter_configmap_${ENVIRONMENT}.yaml -p KEYCLOAK_ADMIN_PASSWORD=$KEYCLOAK_ADMIN_PASSWORD -p KEYCLOAK_REST_ADAPTER_CLIENT_SECRET=$KEYCLOAK_REST_ADAPTER_CLIENT_SECRET | oc replace -f - --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
     - oc tag "gitlab-registry.cern.ch/${LOWERCASE_PATH}:${TAG}" "${APP_NAME}:latest" --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
+
+### Testing
+
+test:
+  stage: test
+  image: "python:3.7-alpine"
+  before_script:
+    - pip install -r requirements.txt
+    - pip install -r test-requirements.txt
+  script:
+    - pytest
+  services:
+    - name: gitlab-registry.cern.ch/authzsvc/docker-images/keycloak
+      alias: keycloak
+  variables:
+    KEYCLOAK_USER: "admin"
+    KEYCLOAK_PASSWORD: "admin"
+
+
+### Docker build definitions
 
 build_docker_dev:
   <<: *docker_definition
@@ -42,7 +61,7 @@ build_docker_dev:
     TO: ${CI_REGISTRY_IMAGE}:${DEV_TAG}
   only:
     - dev
-    
+
 build_docker_qa:
   <<: *docker_definition
   variables:
@@ -57,10 +76,7 @@ build_docker_prod:
   only:
     - tags # the branch you want to publish
 
-test:
-  stage: test
-  script:
-    - 'echo "Tests not implemented..."'
+### Deployment definitions
 
 deploy_dev:
   <<: *deploy_definition
