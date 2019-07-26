@@ -111,7 +111,8 @@ objects:
             "config": {
               "id.token.claim": "true",
               "access.token.claim": "true",
-              "claim.name": "cernrole"
+              "claim.name": "cernrole",
+              "multivalued":"true"
             }
           },
           {
