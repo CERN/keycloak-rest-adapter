@@ -272,6 +272,17 @@ class CommonCreator(Resource):
                     data["protocolMappers"] = default_openid_protocol_mappers[
                         "protocolMappers"
                     ]
+                    # include audience mapper with clientId
+                    data["protocolMappers"].append({
+                        "protocol":"openid-connect",
+                        "config": {
+                            "id.token.claim":"false",
+                            "access.token.claim":"true",
+                            "included.client.audience":data["clientId"]
+                        },
+                        "name":"audience",
+                        "protocolMapper":"oidc-audience-mapper"
+                    })
                 new_client = keycloak_client.create_new_client(**data)
         else:
             return json_response(
