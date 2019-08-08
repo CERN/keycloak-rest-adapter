@@ -230,11 +230,21 @@ class ClientDetails(Resource):
                 "Cannot delete client '{0}'. Client not found".format(clientId), 404
             )
 
-
-@ns.route("/openid/<string:clientId>/regenerate-secret")
-class OpenIdRegenerateSecret(Resource):
+@ns.route("/openid/<string:clientId>/client-secret")
+class ManageClientSecret(Resource):
     @oidc.accept_token(require_token=True)
+    def get(self, clientId):
+        """Show current client secret"""
+        ret = keycloak_client.display_client_secret(clientId)
+        if ret:
+            return jsonify(ret.json())
+        else:
+            return json_response(
+                "Cannot display '{0}' secret. Client not found".format(clientId), 404
+            )
+
     def post(self, clientId):
+        """Reset client secret"""
         ret = keycloak_client.regenerate_client_secret(clientId)
         if ret:
             return jsonify(ret.json())

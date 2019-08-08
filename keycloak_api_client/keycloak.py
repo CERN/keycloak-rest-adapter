@@ -41,10 +41,10 @@ class KeycloakAPIClient(object):
         self.base_url = "{}/auth".format(self.keycloak_server)
         self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
         self.logger = self.__configure_logging()
-
         # Persistent SSL configuration
         # http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
         self.session = requests.Session()
+
         self.logger.info(
             "Client configured to talk to '{0}' server and realm '{1}'".format(
                 self.keycloak_server, self.realm
@@ -112,7 +112,6 @@ class KeycloakAPIClient(object):
         """
         Get HTTP headers with an admin bearer token
         """
-
         if self.access_token_object == None:
             # get admin access token for the 1st time
             self.access_token_object = self.get_admin_access_token()
@@ -276,6 +275,32 @@ class KeycloakAPIClient(object):
         )
         ret = self.send_request("post", url, headers=headers, data=payload)
         return json.loads(ret.text)
+
+    def display_client_secret(self, client_id):
+        """
+        Show client secret of the given client
+        """
+        self.logger.info("Getting '{0}' secret...".format(client_id))
+        headers = self.__get_admin_access_token_headers()
+        client_object = self.get_client_by_clientID(client_id)
+        if client_object:
+            if client_object['protocol'] == 'openid-connect':
+                url = '{0}/admin/realms/{1}/clients/{2}/client-secret'.format(
+                     self.base_url, self.realm, client_object['id'])
+
+                ret = self.send_request(
+                    'get',
+                    url,
+                    headers=headers)
+            else:
+                ret = requests.Response  # new empty response
+                ret.text = "Cannot display client '{0}' secret. Client not openid type".format(
+                    client_id
+                )
+                self.logger.info(ret.text)
+            return ret
+        else:
+            self.logger.info("Cannot display client '{0}' secret. Client not found".format(client_id))
 
     def regenerate_client_secret(self, client_id):
         """
