@@ -73,7 +73,6 @@ class KeycloakAPIClient(object):
     def __send_request(self, request_type, url, **kwargs):
         # if there is 'headers' in kwargs use it instead of default class one
         r_headers = self.headers.copy()
-        kwargs['verify'] = False
         if "headers" in kwargs:
             r_headers.update(kwargs.pop("headers", None))
 
