@@ -2,7 +2,7 @@ Flask==1.0.2
 blinker==1.4
 flask_oidc==1.4.0
 gunicorn==19.4.5
-requests==2.6.0
+requests==2.22.0
 # We had to fork the repo in order to allow the redirect url to work
 flask-restplus-oauth-redirect
 # From urllib3 docs: urllib3 (requests) will try to load the default system certificate stores
