@@ -1,4 +1,4 @@
-Flask==1.0.2
+Flask
 blinker==1.4
 flask_oidc==1.4.0
 gunicorn==19.4.5
