@@ -12,13 +12,14 @@ objects:
     name: keycloak-rest-adapter-configmap
 
   data:
-    client_saml_protocol_mappers.json: |-
+    client_saml_defaults.json: |-
       {
         "protocolMappers":[]
       }
-    client_openid_protocol_mappers.json: |-
+    client_openid_defaults.json: |-
       {
-        "protocolMappers":[]
+        "protocolMappers":[],
+        "webOrigins": ["+"]
       }
     flask_oidc_config.json: |
       {

@@ -300,20 +300,18 @@ class CommonCreator(Resource):
                     data[selected_protocol_id]
                 )
                 # load saml protocol mappers
-                with open("{0}/client_{1}_protocol_mappers.json".format(config_dir, protocol)) as f:
-                    default_saml_protocol_mappers = json.load(f)
-                client_description["protocolMappers"] = default_saml_protocol_mappers[
+                with open("{0}/client_{1}_defaults.json".format(config_dir, protocol)) as f:
+                    saml_defaults = json.load(f)
+                client_description["protocolMappers"] = saml_defaults[
                     "protocolMappers"
                 ]
                 new_client = keycloak_client.create_new_client(**client_description)
-            else:
-                if protocol == "openid" and "protocolMappers" not in data:
+            elif protocol == "openid":
+                with open("{0}/client_{1}_defaults.json".format(config_dir, protocol)) as f:
+                    openid_defaults = json.load(f)
+                if "protocolMappers" not in data:
                     # if not protocolMappers load default openid protocol mappers
-                    with open("{0}/client_{1}_protocol_mappers.json".format(config_dir, protocol)) as f:
-                        default_openid_protocol_mappers = json.load(f)
-                    data["protocolMappers"] = default_openid_protocol_mappers[
-                        "protocolMappers"
-                    ]
+                    data["protocolMappers"] = openid_defaults["protocolMappers"]
                     # include audience mapper with clientId
                     data["protocolMappers"].append({
                         "protocol":"openid-connect",
@@ -325,7 +323,15 @@ class CommonCreator(Resource):
                         "name":"audience",
                         "protocolMapper":"oidc-audience-mapper"
                     })
+                if "webOrigins" not in data:
+                    # include default web origins
+                    data["webOrigins"] = openid_defaults["webOrigins"]
                 new_client = keycloak_client.create_new_client(**data)
+            else:
+                return json_response(
+                    "Unsupported client protocol '{}'".format(protocol),
+                    400
+                )
         else:
             return json_response(
                 "The request is missing '{}'. It must be passed as a query parameter".format(
