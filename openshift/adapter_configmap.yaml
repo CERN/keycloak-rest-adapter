@@ -46,7 +46,7 @@ objects:
       keycloak_rest_adapter_client_secret = ${KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET}
 
       [oauth]
-      redirect_url=https://${ROUTE_HOSTNAME}/oauth2-redirect.html
+      redirect_url=${ROUTE_HOSTNAME}/oauth2-redirect.html
       https_swagger=true
     auth_protocols.json: |
       {
