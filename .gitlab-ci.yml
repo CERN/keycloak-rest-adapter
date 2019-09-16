@@ -11,7 +11,7 @@ variables:
   KEYCLOAK_SERVER_DEV: https://keycloak-dev.cern.ch
   KEYCLOAK_REALM_PROD: master
   KEYCLOAK_REALM_QA: master
-  KEYCLOAK_REALM_DEV: master
+  KEYCLOAK_REALM_DEV: cern
   OPENSHIFT_SERVER_PROD: https://openshift.cern.ch
   OPENSHIFT_SERVER_DEV: https://openshift-dev.cern.ch
   BUILD_ENV_DEV: staging
