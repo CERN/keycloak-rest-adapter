@@ -1,0 +1,85 @@
+apiVersion: v1
+Kind: Template
+metadata:
+  name: keycloak-rest-adapter-template-configmap
+
+objects:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    labels:
+      app: keycloak-rest-adapter-configuration
+    name: keycloak-rest-adapter-configmap
+
+  data:
+    client_saml_defaults.json: |-
+      {
+        "protocolMappers":[]
+      }
+    client_openid_defaults.json: |-
+      {
+        "protocolMappers":[],
+        "webOrigins": ["+"]
+      }
+    flask_oidc_config.json: |
+      {
+          "web": {
+              "issuer": "https://${KEYCLOAK_SERVER}/auth/realms/${KEYCLOAK_REALM}",
+              "auth_uri": "https://${KEYCLOAK_SERVER}/auth/realms/${KEYCLOAK_REALM}/protocol/openid-connect/auth",
+              "client_id": "${KEYCLOAK_REST_ADAPTER_CLIENTID}",
+              "client_secret": "${KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET}",
+              "redirect_uris": [
+                  "${REDIRECT_URIS}"
+              ],
+              "bearer_only": "true",
+              "token_uri": "https://${KEYCLOAK_SERVER}/auth/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token",
+              "token_introspection_uri": "https://${KEYCLOAK_SERVER}/auth/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token/introspect"
+          }
+      }
+    keycloak_client.cfg : |
+      [keycloak]
+      server = ${KEYCLOAK_SERVER}
+      realm = ${KEYCLOAK_REALM}
+      admin_user = ${KEYCLOAK_ADMIN_USERNAME}
+      admin_password = ${KEYCLOAK_ADMIN_PASSWORD}
+      keycloak_rest_adapter_client = ${KEYCLOAK_REST_ADAPTER_CLIENTID}
+      keycloak_rest_adapter_client_secret = ${KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET}
+
+      [oauth]
+      redirect_url=https://${ROUTE_HOSTNAME}/oauth2-redirect.html
+      https_swagger=true
+    auth_protocols.json: |
+      {
+        "saml": "definition",
+        "openid": "clientId"
+      }
+
+
+parameters:
+  - name: KEYCLOAK_SERVER
+    description: "Keycloak server alias"
+    required: True
+  - name: KEYCLOAK_REALM
+    description: "Keycloak REALM"
+    value: 'master'
+    required: True
+  - name: KEYCLOAK_ADMIN_USERNAME
+    description: "Username with admin rights over Keycloak"
+    value: 'admin'
+    required: True
+  - name: KEYCLOAK_ADMIN_PASSWORD
+    description: "Password of the user with admin rights over Keycloak"
+    value: 'password'
+    required: True
+  - name: KEYCLOAK_REST_ADAPTER_CLIENTID
+    description: "Client ID of the client"
+    value: 'keycloak-rest-adapter'
+    required: True
+  - name: KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET
+    description: "Secret of the client ID"
+    required: True
+  - name: REDIRECT_URIS
+    description: "Redirect URIS separated by commas"
+    value: 'something.cern.ch'
+  - name: ROUTE_HOSTNAME
+    description: Openshift Route Hostname

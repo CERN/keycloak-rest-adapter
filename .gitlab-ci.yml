@@ -1,9 +1,17 @@
 variables:
+  KEYCLOAK_ADMIN_USERNAME: admin
   KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-  KEYCLOAK_REST_ADAPTER_CLIENT_SECRET: ${KEYCLOAK_REST_ADAPTER_CLIENT_SECRET}
+  KEYCLOAK_REST_ADAPTER_CLIENTID: keycloak-rest-adapter
+  KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET: ${KEYCLOAK_REST_ADAPTER_CLIENT_SECRET}
   NAMESPACE_DEV: test-keycloak-rest-adapter
   NAMESPACE_QA: keycloak-rest-adapter-qa
   NAMESPACE_PROD: keycloak-rest-adapter
+  KEYCLOAK_SERVER_PROD: keycloak.cern.ch
+  KEYCLOAK_SERVER_QA: keycloak-qa.cern.ch
+  KEYCLOAK_SERVER_DEV: keycloak-dev.cern.ch
+  KEYCLOAK_REALM_PROD: master
+  KEYCLOAK_REALM_QA: master
+  KEYCLOAK_REALM_DEV: master
   OPENSHIFT_SERVER_PROD: https://openshift.cern.ch
   OPENSHIFT_SERVER_DEV: https://openshift-dev.cern.ch
   BUILD_ENV_DEV: staging
@@ -13,6 +21,9 @@ variables:
   DEV_TAG: dev
   RESOURCE: ${CI_PROJECT_NAME}
   APP_NAME: ${CI_PROJECT_NAME}
+  ROUTE_HOSTNAME_PROD: https://${NAMESPACE_PROD}.web.cern.ch
+  ROUTE_HOSTNAME_QA: https://${NAMESPACE_QA}.web.cern.ch
+  ROUTE_HOSTNAME_DEV: https://${NAMESPACE_DEV}.web.cern.ch
 
 stages:
   - test
@@ -32,7 +43,7 @@ stages:
     - LOWERCASE_PATH=$(echo ${CI_PROJECT_PATH} | awk '{ print tolower($0) } ')
     # Adding || true to disable the error message when the image already exists
     - oc import-image ${APP_NAME} --from="gitlab-registry.cern.ch/${LOWERCASE_PATH}:${TAG}" --confirm --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE} || true
-    - oc process --local -f openshift/adapter_configmap_${ENVIRONMENT}.yaml -p KEYCLOAK_ADMIN_PASSWORD=$KEYCLOAK_ADMIN_PASSWORD -p KEYCLOAK_REST_ADAPTER_CLIENT_SECRET=$KEYCLOAK_REST_ADAPTER_CLIENT_SECRET | oc replace -f - --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
+    - oc process --local -f openshift/adapter_configmap.yaml -p KEYCLOAK_SERVER=$KEYCLOAK_SERVER -p KEYCLOAK_REALM=$KEYCLOAK_REALM -p KEYCLOAK_ADMIN_USERNAME=$KEYCLOAK_ADMIN_USERNAME -p KEYCLOAK_ADMIN_PASSWORD=$KEYCLOAK_ADMIN_PASSWORD -p KEYCLOAK_REST_ADAPTER_CLIENTID=$KEYCLOAK_REST_ADAPTER_CLIENTID -p KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET=$KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET -p ROUTE_HOSTNAME=$ROUTE_HOSTNAME | oc replace -f - --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
     - oc tag "gitlab-registry.cern.ch/${LOWERCASE_PATH}:${TAG}" "${APP_NAME}:latest" --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
 
 ### Testing
@@ -81,12 +92,15 @@ build_docker_prod:
 deploy_dev:
   <<: *deploy_definition
   variables:
+    KEYCLOAK_SERVER: ${KEYCLOAK_SERVER_DEV}
+    KEYCLOAK_REALM: ${KEYCLOAK_REALM_DEV}
     KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD_DEV}
     ENVIRONMENT: dev
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_DEV}
     TOKEN: ${OPENSHIFT_DEV_TOKEN}
     NAMESPACE: ${NAMESPACE_DEV}
     TAG: ${DEV_TAG}
+    ROUTE_HOSTNAME: ${ROUTE_HOSTNAME_DEV}
   environment:
     name: staging
     url: https://test-keycloak-rest-adapter.web.cern.ch
@@ -96,12 +110,15 @@ deploy_dev:
 deploy_qa:
   <<: *deploy_definition
   variables:
+    KEYCLOAK_SERVER: ${KEYCLOAK_SERVER_QA}
+    KEYCLOAK_REALM: ${KEYCLOAK_REALM_QA}
     KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD_QA}
     ENVIRONMENT: qa
     TOKEN: ${OPENSHIFT_QA_TOKEN}
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_PROD}
     NAMESPACE: ${NAMESPACE_QA}
     TAG: ${QA_TAG}
+    ROUTE_HOSTNAME: ${ROUTE_HOSTNAME_QA}
   environment:
     name: qa
     url: https://keycloak-rest-adapter-qa.web.cern.ch
@@ -111,12 +128,15 @@ deploy_qa:
 deploy_prod:
   <<: *deploy_definition
   variables:
+    KEYCLOAK_SERVER: ${KEYCLOAK_SERVER_PROD}
+    KEYCLOAK_REALM: ${KEYCLOAK_REALM_PROD}
     KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD_PROD}
     ENVIRONMENT: prod
     TOKEN: ${OPENSHIFT_PROD_TOKEN}
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_PROD}
     NAMESPACE: ${NAMESPACE_PROD}
     TAG: ${CI_COMMIT_TAG}
+    ROUTE_HOSTNAME: ${ROUTE_HOSTNAME_PROD}
   environment:
     name: production
     url: https://keycloak-rest-adapter.web.cern.ch
