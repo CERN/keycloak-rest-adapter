@@ -28,7 +28,13 @@ class KeycloakAPIClient(object):
     ):
         """
         Initialize the class with the params needed to use the API.
-        config_file: Path to file  with config to instanciate the Keycloak Client
+        server: keycloak server: ex. https://keycloak-server.cern.ch
+        realm: realm name KeycloakAPI Client will interact with
+        admin_user: Keycloak user with admin rights
+        admin_password: Password for admin_user
+        client_id: ex. keycloak-rest-adapter
+        client_secret: client_id secret
+        master_realm: master (needed it for admin API calls, policies, permissions, admin token...)
         """
         self.keycloak_server = server
         self.realm = realm
