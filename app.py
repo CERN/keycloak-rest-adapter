@@ -64,8 +64,8 @@ keycloak_client = KeycloakAPIClient(
 
 ui_authorization_url = config.get("oauth", "auth_url", fallback=None)
 if not ui_authorization_url:
-    ui_authorization_url = "{}/auth/realms/master/protocol/openid-connect/auth".format(
-        keycloak_server
+    ui_authorization_url = "{0}/auth/realms/{1}/protocol/openid-connect/auth".format(
+        keycloak_server, realm
     )
 
 authorizations = {
@@ -119,7 +119,7 @@ app.config.update(
         "OIDC-SCOPES": ["openid"],
         "OIDC_CLIENT_SECRETS": flask_oidc_client_secrets_file,
         "OIDC_INTROSPECTION_AUTH_METHOD": "client_secret_post",
-        "OIDC_OPENID_REALM": "master",
+        "OIDC_OPENID_REALM": "{}".format(realm),
         "OIDC_RESOURCE_SERVER_ONLY": True,
         "OIDC_TOKEN_TYPE_HINT": "access_token",
         "DEBUG": True,

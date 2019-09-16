@@ -380,7 +380,7 @@ class KeycloakAPIClient(object):
         headers = self.__get_admin_access_token_headers()
         payload = {"name": policy_name}
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/policy".format(
-            self.base_url, self.realm, self.master_realm_client["id"]
+            self.base_url, self.master_realm, self.master_realm_client["id"]
         )
 
         ret = self.send_request("get", url, headers=headers, params=payload)
@@ -405,7 +405,7 @@ class KeycloakAPIClient(object):
         self.logger.info("Creating policy new '{0}' for client {1}".format(policy_name, clientid))
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/policy/client".format(
-            self.base_url, self.realm, self.master_realm_client["id"]
+            self.base_url, self.master_realm, self.master_realm_client["id"]
         )
 
         self.logger.info("Checking if '{0}' already exists...".format(policy_name))
@@ -452,7 +452,7 @@ class KeycloakAPIClient(object):
                     permission_name))
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/permission/".format(
-            self.base_url, self.realm, self.master_realm_client["id"]
+            self.base_url, self.master_realm, self.master_realm_client["id"]
         )
 
         payload = {"name": permission_name}
@@ -468,7 +468,7 @@ class KeycloakAPIClient(object):
         self.logger.info("Getting authorization policy '{0}'".format(policy_name))
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/policy/".format(
-            self.base_url, self.realm, self.master_realm_client["id"]
+            self.base_url, self.master_realm, self.master_realm_client["id"]
         )
 
         payload = {"name": policy_name}
@@ -544,7 +544,7 @@ class KeycloakAPIClient(object):
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/permission/scope/{3}".format(
             self.base_url,
-            self.realm,
+            self.master_realm,
             self.master_realm_client["id"],
             client_token_exchange_permission["id"],
         )
@@ -563,7 +563,7 @@ class KeycloakAPIClient(object):
 
     def get_permission_associated_policies(self, permission_id):
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/policy/{3}/associatedPolicies".format(
-            self.base_url, self.realm, self.master_realm_client["id"], permission_id
+            self.base_url, self.master_realm, self.master_realm_client["id"], permission_id
         )
         headers = self.__get_admin_access_token_headers()
         ret = self.send_request("get", url, headers=headers)
