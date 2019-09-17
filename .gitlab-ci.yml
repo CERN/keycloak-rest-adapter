@@ -21,9 +21,6 @@ variables:
   DEV_TAG: dev
   RESOURCE: ${CI_PROJECT_NAME}
   APP_NAME: ${CI_PROJECT_NAME}
-  ROUTE_HOSTNAME_PROD: https://${NAMESPACE_PROD}.web.cern.ch
-  ROUTE_HOSTNAME_QA: https://${NAMESPACE_QA}.web.cern.ch
-  ROUTE_HOSTNAME_DEV: https://${NAMESPACE_DEV}.web.cern.ch
 
 stages:
   - test
@@ -100,7 +97,7 @@ deploy_dev:
     TOKEN: ${OPENSHIFT_DEV_TOKEN}
     NAMESPACE: ${NAMESPACE_DEV}
     TAG: ${DEV_TAG}
-    ROUTE_HOSTNAME: ${ROUTE_HOSTNAME_DEV}
+    ROUTE_HOSTNAME: https://${NAMESPACE_DEV}.web.cern.ch
   environment:
     name: staging
     url: https://test-keycloak-rest-adapter.web.cern.ch
@@ -118,7 +115,7 @@ deploy_qa:
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_PROD}
     NAMESPACE: ${NAMESPACE_QA}
     TAG: ${QA_TAG}
-    ROUTE_HOSTNAME: ${ROUTE_HOSTNAME_QA}
+    ROUTE_HOSTNAME: https://${NAMESPACE_QA}.web.cern.ch
   environment:
     name: qa
     url: https://keycloak-rest-adapter-qa.web.cern.ch
@@ -136,7 +133,7 @@ deploy_prod:
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_PROD}
     NAMESPACE: ${NAMESPACE_PROD}
     TAG: ${CI_COMMIT_TAG}
-    ROUTE_HOSTNAME: ${ROUTE_HOSTNAME_PROD}
+    ROUTE_HOSTNAME: https://${NAMESPACE_PROD}.web.cern.ch
   environment:
     name: production
     url: https://keycloak-rest-adapter.web.cern.ch
