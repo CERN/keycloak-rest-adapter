@@ -34,7 +34,7 @@ class KeycloakAPIClient(object):
         admin_password: Password for admin_user
         client_id: ex. keycloak-rest-adapter
         client_secret: client_id secret
-        master_realm: master (needed it for admin API calls, policies, permissions, admin token...)
+        master_realm: master (needed it for admin API calls, admin token...)
         """
         self.keycloak_server = server
         self.realm = realm
@@ -57,7 +57,12 @@ class KeycloakAPIClient(object):
             )
         )
         self.access_token_object = None
-        self.master_realm_client = self.get_client_by_clientID("master-realm", self.master_realm)
+
+        # danielfr quick hack, in non master realms "master-realm" client is replaced by "realm-management"
+        if realm == 'master':
+            self.master_realm_client = self.get_client_by_clientID("master-realm", self.realm)
+        else:
+            self.master_realm_client = self.get_client_by_clientID("realm-management", self.realm)
 
     def __configure_logging(self):
         """Logging setup
@@ -386,7 +391,7 @@ class KeycloakAPIClient(object):
         headers = self.__get_admin_access_token_headers()
         payload = {"name": policy_name}
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/policy".format(
-            self.base_url, self.master_realm, self.master_realm_client["id"]
+            self.base_url, self.realm, self.master_realm_client["id"]
         )
 
         ret = self.send_request("get", url, headers=headers, params=payload)
@@ -411,7 +416,7 @@ class KeycloakAPIClient(object):
         self.logger.info("Creating policy new '{0}' for client {1}".format(policy_name, clientid))
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/policy/client".format(
-            self.base_url, self.master_realm, self.master_realm_client["id"]
+            self.base_url, self.realm, self.master_realm_client["id"]
         )
 
         self.logger.info("Checking if '{0}' already exists...".format(policy_name))
@@ -458,7 +463,7 @@ class KeycloakAPIClient(object):
                     permission_name))
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/permission/".format(
-            self.base_url, self.master_realm, self.master_realm_client["id"]
+            self.base_url, self.realm, self.master_realm_client["id"]
         )
 
         payload = {"name": permission_name}
@@ -474,7 +479,7 @@ class KeycloakAPIClient(object):
         self.logger.info("Getting authorization policy '{0}'".format(policy_name))
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/policy/".format(
-            self.base_url, self.master_realm, self.master_realm_client["id"]
+            self.base_url, self.realm, self.master_realm_client["id"]
         )
 
         payload = {"name": policy_name}
@@ -550,7 +555,7 @@ class KeycloakAPIClient(object):
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/permission/scope/{3}".format(
             self.base_url,
-            self.master_realm,
+            self.realm,
             self.master_realm_client["id"],
             client_token_exchange_permission["id"],
         )
@@ -569,7 +574,7 @@ class KeycloakAPIClient(object):
 
     def get_permission_associated_policies(self, permission_id):
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/policy/{3}/associatedPolicies".format(
-            self.base_url, self.master_realm, self.master_realm_client["id"], permission_id
+            self.base_url, self.realm, self.master_realm_client["id"], permission_id
         )
         headers = self.__get_admin_access_token_headers()
         ret = self.send_request("get", url, headers=headers)
@@ -596,7 +601,7 @@ class KeycloakAPIClient(object):
         refresh_token = self.access_token_object["refresh_token"]
 
         url = "{0}/realms/{1}/protocol/openid-connect/token".format(
-            self.base_url, self.realm
+            self.base_url, self.master_realm
         )
         payload = "refresh_token={0}&grant_type={1}&username={2}&password={3}".format(
             refresh_token, grant_type, self.admin_user, self.admin_password
