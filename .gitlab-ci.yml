@@ -6,11 +6,11 @@ variables:
   NAMESPACE_DEV: test-keycloak-rest-adapter
   NAMESPACE_QA: keycloak-rest-adapter-qa
   NAMESPACE_PROD: keycloak-rest-adapter
-  KEYCLOAK_SERVER_PROD: https://keycloak.cern.ch
+  KEYCLOAK_SERVER_PROD: https://auth.cern.ch
   KEYCLOAK_SERVER_QA: https://keycloak-qa.cern.ch
   KEYCLOAK_SERVER_DEV: https://keycloak-dev.cern.ch
-  KEYCLOAK_REALM_PROD: master
-  KEYCLOAK_REALM_QA: master
+  KEYCLOAK_REALM_PROD: cern
+  KEYCLOAK_REALM_QA: cern
   KEYCLOAK_REALM_DEV: cern
   OPENSHIFT_SERVER_PROD: https://openshift.cern.ch
   OPENSHIFT_SERVER_DEV: https://openshift-dev.cern.ch
