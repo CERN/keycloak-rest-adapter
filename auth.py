@@ -1,5 +1,6 @@
 import requests
 from authlib.jose import jwk, jwt
+from authlib.jose.errors import InvalidClaimError
 from authlib.oidc.core import ImplicitIDToken, UserInfo
 from flask import current_app, request
 
@@ -15,6 +16,12 @@ class ImplicitIDTokenNoNonce(ImplicitIDToken):
     """
 
     ESSENTIAL_CLAIMS = ["iss", "sub", "aud", "exp", "iat"]
+
+    def validate_azp(self):
+        azp = self.get('azp')
+        client_id = self.params.get('client_id')
+        if azp and (azp not in AUTHORIZED_APPS or client_id != azp):
+            raise InvalidClaimError('azp')
 
 
 def validate_api_access(access_token):
