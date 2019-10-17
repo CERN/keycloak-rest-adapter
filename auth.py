@@ -17,11 +17,22 @@ class ImplicitIDTokenNoNonce(ImplicitIDToken):
 
     ESSENTIAL_CLAIMS = ["iss", "sub", "aud", "exp", "iat"]
 
-    def validate_azp(self):
-        azp = self.get('azp')
-        client_id = self.params.get('client_id')
-        if azp and client_id and (azp not in AUTHORIZED_APPS or client_id != azp):
-            raise InvalidClaimError('azp')
+    # def validate_azp(self):
+    #     aud = self.get('aud')
+    #     client_id = self.params.get('client_id')
+    #     required = False
+    #     if aud and client_id:
+    #         if isinstance(aud, list) and len(aud) == 1:
+    #             aud = aud[0]
+    #         if aud != client_id:
+    #             required = True
+    #
+    #     azp = self.get('azp')
+    #     if required and not azp:
+    #         raise MissingClaimError('azp')
+    #
+    #     if azp and client_id and azp != client_id:
+    #         raise InvalidClaimError('azp')
 
 
 def validate_api_access(access_token):
