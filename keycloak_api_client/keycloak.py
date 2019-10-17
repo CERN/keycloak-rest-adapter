@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 
 import json
-import logging
 import requests
-import ssl
-import sys
-from pprint import pprint
+from log_utils import configure_logging
 
 class KeycloakAPIClient(object):
 
@@ -46,7 +43,7 @@ class KeycloakAPIClient(object):
 
         self.base_url = "{}/auth".format(self.keycloak_server)
         self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        self.logger = self.__configure_logging()
+        self.logger = configure_logging()
         # Persistent SSL configuration
         # http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
         self.session = requests.Session()
@@ -63,23 +60,6 @@ class KeycloakAPIClient(object):
             self.master_realm_client = self.get_client_by_clientID("master-realm", self.realm)
         else:
             self.master_realm_client = self.get_client_by_clientID("realm-management", self.realm)
-
-    def __configure_logging(self):
-        """Logging setup
-        """
-        logger = logging.getLogger(__name__)
-        logger.setLevel(logging.DEBUG)
-        formatter = logging.Formatter("%(asctime)s %(levelname)s - %(message)s")
-
-        console = logging.StreamHandler(sys.stdout)
-        console.setFormatter(formatter)
-        logger.addHandler(console)
-
-        # Requests logs some stuff at INFO that we don't want
-        # unless we have DEBUG
-        requests_log = logging.getLogger("requests")
-        requests_log.setLevel(logging.ERROR)
-        return logger
 
     def __send_request(self, request_type, url, **kwargs):
         # if there is 'headers' in kwargs use it instead of default class one
@@ -546,7 +526,7 @@ class KeycloakAPIClient(object):
         except ValueError:
             raise ValueError("Token exchange permissions not found between client '{0}' and '{1}'".format(
                     target_clientid, requestor_clientid))
-                    
+
         self.logger.info("Revoking token-exhange between client '{0}' and '{1}'".format(
                     target_clientid, requestor_clientid))
         return self.update_token_exchange_permissions(client_token_exchange_permission, policies)

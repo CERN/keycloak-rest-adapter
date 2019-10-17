@@ -47,7 +47,7 @@ stages:
 
 test:
   stage: test
-  image: "python:3.7-alpine"
+  image: "python:3.7-slim"
   before_script:
     - pip install -r requirements.txt
     - pip install -r test-requirements.txt

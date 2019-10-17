@@ -1,21 +1,20 @@
 import json
 import os
-
 from configparser import ConfigParser
+
 from flask import (
     Flask,
     g,
     jsonify,
-    make_response,
     redirect,
     request,
     send_from_directory,
-    url_for,
 )
-from flask_oidc import OpenIDConnect
-from flask_restplus import Resource, Api, Namespace, fields, apidoc
-from keycloak_api_client.keycloak import KeycloakAPIClient
+from flask_restplus import Resource, Api, fields, apidoc
 
+from auth import oidc_validate
+from keycloak_api_client.keycloak import KeycloakAPIClient
+from log_utils import configure_logging
 from utils import (
     json_response,
     get_request_data,
@@ -23,7 +22,6 @@ from utils import (
     validate_protocol,
     validate_protocol_data,
     config_dir,
-    SUPPORTED_PROTOCOLS,
     auth_protocols,
 )
 
@@ -38,11 +36,9 @@ if os.environ.get("REQUESTS_CA_BUNDLE") is None:
 privatekey_file = "{0}/keycloak-rest-adapter_nopass.key".format(config_dir)
 certificate_file = "{0}/keycloak-rest-adapter.crt".format(config_dir)
 keycloakclient_config_file = "{0}/keycloak_client.cfg".format(config_dir)
-flask_oidc_client_secrets_file = "{0}/flask_oidc_config.json".format(config_dir)
 
 API_VERSION = "v1.0"
 API_URL_PREFIX = "/api/{}".format(API_VERSION)
-
 
 ##################################
 # not very elengant, see ->
@@ -88,6 +84,8 @@ api = Api(
     doc="/swagger-ui",
 )
 
+app.logger = configure_logging()
+
 
 class ApiDoc:
     def __init__(self, title, specs_url):
@@ -114,38 +112,12 @@ user_ns = api.namespace("user", description="Methods for handling user operation
 # Models
 model = ns.model("Payload", {"clientId": fields.String}, required=False)
 
-app.config.update(
-    {
-        "OIDC-SCOPES": ["openid"],
-        "OIDC_CLIENT_SECRETS": flask_oidc_client_secrets_file,
-        "OIDC_INTROSPECTION_AUTH_METHOD": "client_secret_post",
-        "OIDC_OPENID_REALM": "{}".format(realm),
-        "OIDC_RESOURCE_SERVER_ONLY": True,
-        "OIDC_TOKEN_TYPE_HINT": "access_token",
-        "DEBUG": True,
-        "TESTING": True,
-    }
-)
-
-oidc = OpenIDConnect(app)
-
-### Done with the config
-
-authorized_apps = ['authorization-service-api']
-api_access_role = 'admin'
-
-def validate_api_access():
-    try:
-        access_token =  g.oidc_token_info
-        # for exchange token access like 'authorization-service-api'
-        if access_token['azp'] in authorized_apps:
-            return True
-        elif api_access_role in access_token['resource_access'][client_id]['roles']:
-            return True
-        else:
-            return False
-    except Exception:
-        return False
+# OIDC configuration
+app.config.update({
+    "OIDC_JWKS_URL": config.get("oidc", "jwks_url"),
+    "OIDC_ISSUER": config.get("oidc", "issuer"),
+    "OIDC_CLIENT_ID": client_id
+})
 
 
 @app.route("/")
@@ -160,11 +132,9 @@ def redirect_oauth():
 
 @ns.route("/openid/<path:target_client_id>/token-exchange-permissions/<path:requestor_client_id>")
 class TokenExchangePermissions(Resource):
-    @oidc.accept_token(require_token=True)
+    @oidc_validate
     def put(self, target_client_id, requestor_client_id):
         """Grants token exchange permissions"""
-        if not validate_api_access():
-            return json_response("Unauthorized", 401)
 
         target_client = keycloak_client.get_client_by_clientID(target_client_id)
         requestor_client = keycloak_client.get_client_by_clientID(requestor_client_id)
@@ -181,7 +151,7 @@ class TokenExchangePermissions(Resource):
         else:
             return ret.reason, 400
 
-    @oidc.accept_token(require_token=True)
+    @oidc_validate
     def delete(self, target_client_id, requestor_client_id):
         """Revokes token exchange permissions"""
         target_client = keycloak_client.get_client_by_clientID(target_client_id)
@@ -216,12 +186,9 @@ class TokenExchangePermissions(Resource):
 @ns.route("/<protocol>/<path:clientId>")
 class ClientDetails(Resource):
     @ns.doc(body=model)
-    @oidc.accept_token(require_token=True)
+    @oidc_validate
     def put(self, protocol, clientId):
         """Update a client"""
-        if not validate_api_access():
-            return json_response("Unauthorized", 401)
-
         data = get_request_data(request)
         if (protocol == "saml") and ("definition" in data):
             data = keycloak_client.client_description_converter(data["definition"])
@@ -236,12 +203,9 @@ class ClientDetails(Resource):
                 400,
             )
 
-    @oidc.accept_token(require_token=True)
+    @oidc_validate
     def delete(self, protocol, clientId):
         """Delete a client"""
-        if not validate_api_access():
-            return json_response("Unauthorized", 401)
-
         validation = validate_protocol(protocol)
         if validation:
             return validation
@@ -255,14 +219,13 @@ class ClientDetails(Resource):
                 "Cannot delete client '{0}'. Client not found".format(clientId), 404
             )
 
+
 @ns.route("/openid/<string:clientId>/client-secret")
 class ManageClientSecret(Resource):
-    @oidc.accept_token(require_token=True)
+
+    @oidc_validate
     def get(self, clientId):
         """Show current client secret"""
-        if not validate_api_access():
-            return json_response("Unauthorized", 401)
-
         ret = keycloak_client.display_client_secret(clientId)
         if ret:
             return jsonify(ret.json())
@@ -271,12 +234,9 @@ class ManageClientSecret(Resource):
                 "Cannot display '{0}' secret. Client not found".format(clientId), 404
             )
 
-    @oidc.accept_token(require_token=True)
+    @oidc_validate
     def post(self, clientId):
         """Reset client secret"""
-        if not validate_api_access():
-            return json_response("Unauthorized", 401)
-
         ret = keycloak_client.regenerate_client_secret(clientId)
         if ret:
             return jsonify(ret.json())
@@ -314,14 +274,14 @@ class CommonCreator(Resource):
                     data["protocolMappers"] = openid_defaults["protocolMappers"]
                     # include audience mapper with clientId
                     data["protocolMappers"].append({
-                        "protocol":"openid-connect",
+                        "protocol": "openid-connect",
                         "config": {
-                            "id.token.claim":"false",
-                            "access.token.claim":"true",
-                            "included.client.audience":data["clientId"]
+                            "id.token.claim": "false",
+                            "access.token.claim": "true",
+                            "included.client.audience": data["clientId"]
                         },
-                        "name":"audience",
-                        "protocolMapper":"oidc-audience-mapper"
+                        "name": "audience",
+                        "protocolMapper": "oidc-audience-mapper"
                     })
                 if "webOrigins" not in data:
                     # include default web origins
@@ -350,11 +310,8 @@ class CommonCreator(Resource):
 @ns.route("/<string:protocol>")
 class CreatorDetails(CommonCreator):
     @ns.doc(body=model)
-    @oidc.accept_token(require_token=True)
+    @oidc_validate
     def post(self, protocol):
-        if not validate_api_access():
-            return json_response("Unauthorized", 401)
-
         data = get_request_data(request)
         data["protocol"] = protocol
         validation = validate_protocol_data(data)
@@ -366,11 +323,8 @@ class CreatorDetails(CommonCreator):
 @ns.route("/")
 class Creator(CommonCreator):
     @ns.doc(body=model)
-    @oidc.accept_token(require_token=True)
+    @oidc_validate
     def post(self):
-        if not validate_api_access():
-            return json_response("Unauthorized", 401)
-
         data = get_request_data(request)
         validation = validate_protocol_data(data)
         if validation:
@@ -380,16 +334,14 @@ class Creator(CommonCreator):
 
 @user_ns.route("/logout/<string:user_id>")
 class UserLogout(Resource):
-    @oidc.accept_token(require_token=True)
+
+    @oidc_validate
     def delete(self, user_id):
         """
         Logout the user with the specified user_id from all sessions
         
         user_id: the user id (GUID)
         """
-        if not validate_api_access():
-            return json_response("Unauthorized", 401)
-
         if not user_id:
             return json_response("The request has an invalid 'user_id'", 400)
         response = keycloak_client.logout_user(user_id)
@@ -399,12 +351,9 @@ class UserLogout(Resource):
 @user_ns.route("/<username>")
 class UserDetails(Resource):
     @user_ns.doc(body=model)
-    @oidc.accept_token(require_token=True)
+    @oidc_validate
     def put(self, username):
         """Update a user"""
-        if not validate_api_access():
-            return json_response("Unauthorized", 401)
-
         data = get_request_data(request)
         updated_user = keycloak_client.update_user_properties(username, **data)
         if updated_user:
@@ -422,7 +371,7 @@ if __name__ == "__main__":
     print("** Debug mode should never be used in a production environment! ***")
     app.run(
         host="0.0.0.0",
-        ssl_context=(certificate_file, privatekey_file),
+        # ssl_context=(certificate_file, privatekey_file),
         port=8080,
         debug=True,
     )
