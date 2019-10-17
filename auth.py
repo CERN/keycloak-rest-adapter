@@ -20,7 +20,7 @@ class ImplicitIDTokenNoNonce(ImplicitIDToken):
     def validate_azp(self):
         azp = self.get('azp')
         client_id = self.params.get('client_id')
-        if azp and (azp not in AUTHORIZED_APPS or client_id != azp):
+        if azp and client_id and (azp not in AUTHORIZED_APPS or client_id != azp):
             raise InvalidClaimError('azp')
 
 
