@@ -1,6 +1,6 @@
 import requests
 from authlib.jose import jwk, jwt
-from authlib.jose.errors import InvalidClaimError
+from authlib.jose.errors import InvalidClaimError, MissingClaimError
 from authlib.oidc.core import ImplicitIDToken, UserInfo
 from flask import current_app, request
 
@@ -17,22 +17,24 @@ class ImplicitIDTokenNoNonce(ImplicitIDToken):
 
     ESSENTIAL_CLAIMS = ["iss", "sub", "aud", "exp", "iat"]
 
-    # def validate_azp(self):
-    #     aud = self.get('aud')
-    #     client_id = self.params.get('client_id')
-    #     required = False
-    #     if aud and client_id:
-    #         if isinstance(aud, list) and len(aud) == 1:
-    #             aud = aud[0]
-    #         if aud != client_id:
-    #             required = True
-    #
-    #     azp = self.get('azp')
-    #     if required and not azp:
-    #         raise MissingClaimError('azp')
-    #
-    #     if azp and client_id and azp != client_id:
-    #         raise InvalidClaimError('azp')
+    # Based on https://github.com/lepture/authlib/blob/master/authlib/oidc/core/claims.py#L115
+    def validate_azp(self):
+        aud = self.get('aud')
+        client_id = self.params.get('client_id')
+        required = False
+        if aud and client_id:
+            if isinstance(aud, list) and len(aud) == 1:
+                aud = aud[0]
+            if aud != client_id:
+                required = True
+
+        azp = self.get('azp')
+        if required and not azp:
+            raise MissingClaimError('azp')
+
+        if azp and client_id and azp != client_id:
+            if azp not in AUTHORIZED_APPS:
+                raise InvalidClaimError('azp')
 
 
 def validate_api_access(access_token):
