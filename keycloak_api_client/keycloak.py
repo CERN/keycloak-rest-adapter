@@ -17,8 +17,6 @@ class KeycloakAPIClient(object):
         self,
         server,
         realm,
-        admin_user,
-        admin_password,
         client_id,
         client_secret,
         master_realm="master",
@@ -27,16 +25,12 @@ class KeycloakAPIClient(object):
         Initialize the class with the params needed to use the API.
         server: keycloak server: ex. https://keycloak-server.cern.ch
         realm: realm name KeycloakAPI Client will interact with
-        admin_user: Keycloak user with admin rights
-        admin_password: Password for admin_user
         client_id: ex. keycloak-rest-adapter
         client_secret: client_id secret
         master_realm: master (needed it for admin API calls, admin token...)
         """
         self.keycloak_server = server
         self.realm = realm
-        self.admin_user = admin_user
-        self.admin_password = admin_password
         self.client_id = client_id
         self.client_secret = client_secret
         self.master_realm = master_realm
@@ -583,8 +577,8 @@ class KeycloakAPIClient(object):
         url = "{0}/realms/{1}/protocol/openid-connect/token".format(
             self.base_url, self.master_realm
         )
-        payload = "refresh_token={0}&grant_type={1}&username={2}&password={3}".format(
-            refresh_token, grant_type, self.admin_user, self.admin_password
+        payload = "refresh_token={0}&grant_type={1}&client_id={2}&client_secret={3}".format(
+            refresh_token, grant_type, self.client_id, self.client_secret
         )
         ret = self.send_request("post", url, data=payload)
         return json.loads(ret.tex)
@@ -593,17 +587,16 @@ class KeycloakAPIClient(object):
         """
         https://www.keycloak.org/docs/2.5/server_development/topics/admin-rest-api.html
         """
-        self.logger.info("Getting admin access token")
-
-        client_id = "admin-cli"
-        grant_type = "password"
-
         url = "{0}/realms/{1}/protocol/openid-connect/token".format(
             self.base_url, self.master_realm
         )
-        payload = "client_id={0}&grant_type={1}&username={2}&password={3}".format(
-            client_id, grant_type, self.admin_user, self.admin_password
+
+        grant_type = 'client_credentials'
+        payload = "scope=openid&grant_type={0}&client_id={1}&client_secret={2}".format(
+            grant_type, self.client_id, self.client_secret
         )
+
+        self.logger.info("Getting admin access token using {} client credentials".format(self.client_id))
         ret = self.send_request("post", url, data=payload)
         if ret.status_code != 200:
             self.logger.error(

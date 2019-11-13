@@ -49,13 +49,11 @@ config.readfp(open(keycloakclient_config_file))
 
 keycloak_server = config.get("keycloak", "server")
 realm = config.get("keycloak", "realm")
-admin_user = config.get("keycloak", "admin_user")
-admin_password = config.get("keycloak", "admin_password")
 client_id = config.get("keycloak", "keycloak_rest_adapter_client")
 client_secret = config.get("keycloak", "keycloak_rest_adapter_client_secret")
 
 keycloak_client = KeycloakAPIClient(
-    keycloak_server, realm, admin_user, admin_password, client_id, client_secret
+    keycloak_server, realm, client_id, client_secret
 )
 
 ui_authorization_url = config.get("oauth", "auth_url", fallback=None)
