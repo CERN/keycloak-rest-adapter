@@ -9,9 +9,12 @@ def configure_logging():
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter("%(asctime)s %(levelname)s - %(message)s")
 
-    console = logging.StreamHandler(sys.stdout)
-    console.setFormatter(formatter)
-    logger.addHandler(console)
+    # adds console handler to logger instance the first time this code is called
+    # avoids adding extra handlers to the instance, which causes duplicate logs msgs
+    if not len(logger.handlers):
+        console = logging.StreamHandler(sys.stdout)
+        console.setFormatter(formatter)
+        logger.addHandler(console)
 
     # Requests logs some stuff at INFO that we don't want
     # unless we have DEBUG
