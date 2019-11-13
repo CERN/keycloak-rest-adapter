@@ -40,7 +40,7 @@ stages:
     - LOWERCASE_PATH=$(echo ${CI_PROJECT_PATH} | awk '{ print tolower($0) } ')
     # Adding || true to disable the error message when the image already exists
     - oc import-image ${APP_NAME} --from="gitlab-registry.cern.ch/${LOWERCASE_PATH}:${TAG}" --confirm --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE} || true
-    - oc process --local -f openshift/adapter_configmap.yaml -p KEYCLOAK_SERVER=$KEYCLOAK_SERVER -p KEYCLOAK_REALM=$KEYCLOAK_REALM -p KEYCLOAK_ADMIN_USERNAME=$KEYCLOAK_ADMIN_USERNAME -p KEYCLOAK_ADMIN_PASSWORD=$KEYCLOAK_ADMIN_PASSWORD -p KEYCLOAK_REST_ADAPTER_CLIENTID=$KEYCLOAK_REST_ADAPTER_CLIENTID -p KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET=$KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET -p ROUTE_HOSTNAME=$ROUTE_HOSTNAME | oc replace -f - --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
+    - oc process --local -f openshift/adapter_configmap.yaml -p KEYCLOAK_SERVER=$KEYCLOAK_SERVER -p KEYCLOAK_REALM=$KEYCLOAK_REALM -p KEYCLOAK_REST_ADAPTER_CLIENTID=$KEYCLOAK_REST_ADAPTER_CLIENTID -p KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET=$KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET -p ROUTE_HOSTNAME=$ROUTE_HOSTNAME | oc replace -f - --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
     - oc tag "gitlab-registry.cern.ch/${LOWERCASE_PATH}:${TAG}" "${APP_NAME}:latest" --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
 
 ### Testing
