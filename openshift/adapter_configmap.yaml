@@ -25,8 +25,6 @@ objects:
       [keycloak]
       server = ${KEYCLOAK_SERVER}
       realm = ${KEYCLOAK_REALM}
-      admin_user = ${KEYCLOAK_ADMIN_USERNAME}
-      admin_password = ${KEYCLOAK_ADMIN_PASSWORD}
       keycloak_rest_adapter_client = ${KEYCLOAK_REST_ADAPTER_CLIENTID}
       keycloak_rest_adapter_client_secret = ${KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET}
 
@@ -52,14 +50,6 @@ parameters:
   - name: KEYCLOAK_REALM
     description: "Keycloak REALM"
     value: 'master'
-    required: True
-  - name: KEYCLOAK_ADMIN_USERNAME
-    description: "Username with admin rights over Keycloak"
-    value: 'admin'
-    required: True
-  - name: KEYCLOAK_ADMIN_PASSWORD
-    description: "Password of the user with admin rights over Keycloak"
-    value: 'password'
     required: True
   - name: KEYCLOAK_REST_ADAPTER_CLIENTID
     description: "Client ID of the client"

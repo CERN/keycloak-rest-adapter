@@ -44,7 +44,7 @@ class TestKeycloakApiClient(unittest.TestCase):
 
     def setUp(self):
         self.client = KeycloakAPIClient(
-            self.server, "test", "admin", "admin", "keycloak-rest-adapter", "12345678")
+            self.server, "test", "keycloak-rest-adapter", "12345678")
 
     def test_create_oidc_client(self):
         self.client.delete_client_by_clientID(OIDC_CLIENT_ID)
