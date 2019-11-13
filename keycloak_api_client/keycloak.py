@@ -621,7 +621,7 @@ class KeycloakAPIClient(object):
         grant_type = "client_credentials"
 
         url = "{0}/realms/{1}/protocol/openid-connect/token".format(
-            self.base_url, self.realm
+            self.base_url, self.master_realm
         )
         payload = "client_id={0}&grant_type={1}&client_secret={2}".format(
             client_id, grant_type, client_secret
