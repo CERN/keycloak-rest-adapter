@@ -1,8 +1,5 @@
 variables:
-  KEYCLOAK_ADMIN_USERNAME: admin
-  KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-  KEYCLOAK_REST_ADAPTER_CLIENTID: keycloak-rest-adapter
-  KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET: ${KEYCLOAK_REST_ADAPTER_CLIENT_SECRET}
+  CLIENT_ID: keycloak-rest-adapter
   NAMESPACE_DEV: test-keycloak-rest-adapter
   NAMESPACE_QA: keycloak-rest-adapter-qa
   NAMESPACE_PROD: keycloak-rest-adapter
@@ -40,7 +37,7 @@ stages:
     - LOWERCASE_PATH=$(echo ${CI_PROJECT_PATH} | awk '{ print tolower($0) } ')
     # Adding || true to disable the error message when the image already exists
     - oc import-image ${APP_NAME} --from="gitlab-registry.cern.ch/${LOWERCASE_PATH}:${TAG}" --confirm --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE} || true
-    - oc process --local -f openshift/adapter_configmap.yaml -p KEYCLOAK_SERVER=$KEYCLOAK_SERVER -p KEYCLOAK_REALM=$KEYCLOAK_REALM -p KEYCLOAK_REST_ADAPTER_CLIENTID=$KEYCLOAK_REST_ADAPTER_CLIENTID -p KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET=$KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET -p ROUTE_HOSTNAME=$ROUTE_HOSTNAME | oc replace -f - --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
+    - oc process --local -f openshift/adapter_configmap.yaml -p KC_ALIAS=$KC_ALIAS -p REALM=$REALM -p CLIENT_ID=$CLIENT_ID -p CLIENT_SECRET=$CLIENT_SECRET -p ROUTE_HOSTNAME=$ROUTE_HOSTNAME | oc replace -f - --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
     - oc tag "gitlab-registry.cern.ch/${LOWERCASE_PATH}:${TAG}" "${APP_NAME}:latest" --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
 
 ### Testing
@@ -89,9 +86,9 @@ build_docker_prod:
 deploy_dev:
   <<: *deploy_definition
   variables:
-    KEYCLOAK_SERVER: ${KEYCLOAK_SERVER_DEV}
-    KEYCLOAK_REALM: ${KEYCLOAK_REALM_DEV}
-    KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD_DEV}
+    KC_ALIAS: ${KEYCLOAK_SERVER_DEV}
+    REALM: ${KEYCLOAK_REALM_DEV}
+    CLIENT_SECRET: ${CLIENT_SECRET_DEV}
     ENVIRONMENT: dev
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_DEV}
     TOKEN: ${OPENSHIFT_DEV_TOKEN}
@@ -107,9 +104,9 @@ deploy_dev:
 deploy_qa:
   <<: *deploy_definition
   variables:
-    KEYCLOAK_SERVER: ${KEYCLOAK_SERVER_QA}
-    KEYCLOAK_REALM: ${KEYCLOAK_REALM_QA}
-    KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD_QA}
+    KC_ALIAS: ${KEYCLOAK_SERVER_QA}
+    REALM: ${KEYCLOAK_REALM_QA}
+    CLIENT_SECRET: ${CLIENT_SECRET_QA}
     ENVIRONMENT: qa
     TOKEN: ${OPENSHIFT_QA_TOKEN}
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_PROD}
@@ -125,9 +122,9 @@ deploy_qa:
 deploy_prod:
   <<: *deploy_definition
   variables:
-    KEYCLOAK_SERVER: ${KEYCLOAK_SERVER_PROD}
-    KEYCLOAK_REALM: ${KEYCLOAK_REALM_PROD}
-    KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD_PROD}
+    KC_ALIAS: ${KEYCLOAK_SERVER_PROD}
+    REALM: ${KEYCLOAK_REALM_PROD}
+    CLIENT_SECRET: ${CLIENT_SECRET_PROD}
     ENVIRONMENT: prod
     TOKEN: ${OPENSHIFT_PROD_TOKEN}
     OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_PROD}

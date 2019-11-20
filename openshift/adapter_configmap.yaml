@@ -23,18 +23,18 @@ objects:
       }
     keycloak_client.cfg : |
       [keycloak]
-      server = ${KEYCLOAK_SERVER}
-      realm = ${KEYCLOAK_REALM}
-      keycloak_rest_adapter_client = ${KEYCLOAK_REST_ADAPTER_CLIENTID}
-      keycloak_rest_adapter_client_secret = ${KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET}
+      server = ${KC_ALIAS}
+      realm = ${REALM}
+      keycloak_rest_adapter_client = ${CLIENT_ID}
+      keycloak_rest_adapter_client_secret = ${CLIENT_SECRET}
 
       [oauth]
       redirect_url=${ROUTE_HOSTNAME}/oauth2-redirect.html
       https_swagger=true
 
       [oidc]
-      jwks_url = ${KEYCLOAK_SERVER}/auth/realms/cern/protocol/openid-connect/certs
-      issuer =${KEYCLOAK_SERVER}/auth/realms/cern
+      jwks_url = ${KC_ALIAS}/auth/realms/cern/protocol/openid-connect/certs
+      issuer =${KC_ALIAS}/auth/realms/cern
 
     auth_protocols.json: |
       {
@@ -44,19 +44,19 @@ objects:
 
 
 parameters:
-  - name: KEYCLOAK_SERVER
+  - name: KC_ALIAS
     description: "Keycloak server alias"
     required: True
-  - name: KEYCLOAK_REALM
-    description: "Keycloak REALM"
+  - name: REALM
+    description: "Keycloak REALM the REST adapter will interact with"
     value: 'master'
     required: True
-  - name: KEYCLOAK_REST_ADAPTER_CLIENTID
-    description: "Client ID of the client"
+  - name: CLIENT_ID
+    description: "Client ID with rights over Keycloak Admin REST API"
     value: 'keycloak-rest-adapter'
     required: True
-  - name: KEYCLOAK_REST_ADAPTER_CLIENTID_SECRET
-    description: "Secret of the client ID"
+  - name: CLIENT_SECRET
+    description: "Client secret"
     required: True
   - name: REDIRECT_URIS
     description: "Redirect URIS separated by commas"
