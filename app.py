@@ -52,9 +52,7 @@ realm = config.get("keycloak", "realm")
 client_id = config.get("keycloak", "keycloak_rest_adapter_client")
 client_secret = config.get("keycloak", "keycloak_rest_adapter_client_secret")
 
-keycloak_client = KeycloakAPIClient(
-    keycloak_server, realm, client_id, client_secret
-)
+keycloak_client = KeycloakAPIClient(keycloak_server, realm, client_id, client_secret)
 
 ui_authorization_url = config.get("oauth", "auth_url", fallback=None)
 if not ui_authorization_url:
@@ -111,11 +109,13 @@ user_ns = api.namespace("user", description="Methods for handling user operation
 model = ns.model("Payload", {"clientId": fields.String}, required=False)
 
 # OIDC configuration
-app.config.update({
-    "OIDC_JWKS_URL": config.get("oidc", "jwks_url"),
-    "OIDC_ISSUER": config.get("oidc", "issuer"),
-    "OIDC_CLIENT_ID": client_id
-})
+app.config.update(
+    {
+        "OIDC_JWKS_URL": config.get("oidc", "jwks_url"),
+        "OIDC_ISSUER": config.get("oidc", "issuer"),
+        "OIDC_CLIENT_ID": client_id,
+    }
+)
 
 
 @app.route("/")
@@ -128,7 +128,9 @@ def redirect_oauth():
     return send_from_directory("static", "oauth2-redirect.html")
 
 
-@ns.route("/openid/<path:target_client_id>/token-exchange-permissions/<path:requestor_client_id>")
+@ns.route(
+    "/openid/<path:target_client_id>/token-exchange-permissions/<path:requestor_client_id>"
+)
 class TokenExchangePermissions(Resource):
     @oidc_validate
     def put(self, target_client_id, requestor_client_id):
@@ -137,7 +139,9 @@ class TokenExchangePermissions(Resource):
         target_client = keycloak_client.get_client_by_clientID(target_client_id)
         requestor_client = keycloak_client.get_client_by_clientID(requestor_client_id)
 
-        verify_error = self.__verify_clients(target_client, requestor_client, target_client_id, requestor_client_id)
+        verify_error = self.__verify_clients(
+            target_client, requestor_client, target_client_id, requestor_client_id
+        )
         if verify_error:
             return verify_error
 
@@ -155,7 +159,9 @@ class TokenExchangePermissions(Resource):
         target_client = keycloak_client.get_client_by_clientID(target_client_id)
         requestor_client = keycloak_client.get_client_by_clientID(requestor_client_id)
 
-        verify_error = self.__verify_clients(target_client, requestor_client, target_client_id, requestor_client_id)
+        verify_error = self.__verify_clients(
+            target_client, requestor_client, target_client_id, requestor_client_id
+        )
         if verify_error:
             return verify_error
         try:
@@ -169,7 +175,9 @@ class TokenExchangePermissions(Resource):
         else:
             return ret.reason, 400
 
-    def __verify_clients(self, target_client, requestor_client, target_client_name, requestor_client_name):
+    def __verify_clients(
+        self, target_client, requestor_client, target_client_name, requestor_client_name
+    ):
         if target_client and requestor_client:
             return False
         else:
@@ -220,7 +228,6 @@ class ClientDetails(Resource):
 
 @ns.route("/openid/<string:clientId>/client-secret")
 class ManageClientSecret(Resource):
-
     @oidc_validate
     def get(self, clientId):
         """Show current client secret"""
@@ -258,37 +265,40 @@ class CommonCreator(Resource):
                     data[selected_protocol_id]
                 )
                 # load saml protocol mappers
-                with open("{0}/client_{1}_defaults.json".format(config_dir, protocol)) as f:
+                with open(
+                    "{0}/client_{1}_defaults.json".format(config_dir, protocol)
+                ) as f:
                     saml_defaults = json.load(f)
-                client_description["protocolMappers"] = saml_defaults[
-                    "protocolMappers"
-                ]
+                client_description["protocolMappers"] = saml_defaults["protocolMappers"]
                 new_client = keycloak_client.create_new_client(**client_description)
             elif protocol == "openid":
-                with open("{0}/client_{1}_defaults.json".format(config_dir, protocol)) as f:
+                with open(
+                    "{0}/client_{1}_defaults.json".format(config_dir, protocol)
+                ) as f:
                     openid_defaults = json.load(f)
                 if "protocolMappers" not in data:
                     # if not protocolMappers load default openid protocol mappers
                     data["protocolMappers"] = openid_defaults["protocolMappers"]
                     # include audience mapper with clientId
-                    data["protocolMappers"].append({
-                        "protocol": "openid-connect",
-                        "config": {
-                            "id.token.claim": "false",
-                            "access.token.claim": "true",
-                            "included.client.audience": data["clientId"]
-                        },
-                        "name": "audience",
-                        "protocolMapper": "oidc-audience-mapper"
-                    })
+                    data["protocolMappers"].append(
+                        {
+                            "protocol": "openid-connect",
+                            "config": {
+                                "id.token.claim": "false",
+                                "access.token.claim": "true",
+                                "included.client.audience": data["clientId"],
+                            },
+                            "name": "audience",
+                            "protocolMapper": "oidc-audience-mapper",
+                        }
+                    )
                 if "webOrigins" not in data:
                     # include default web origins
                     data["webOrigins"] = openid_defaults["webOrigins"]
                 new_client = keycloak_client.create_new_client(**data)
             else:
                 return json_response(
-                    "Unsupported client protocol '{}'".format(protocol),
-                    400
+                    "Unsupported client protocol '{}'".format(protocol), 400
                 )
         else:
             return json_response(
@@ -332,7 +342,6 @@ class Creator(CommonCreator):
 
 @user_ns.route("/logout/<string:user_id>")
 class UserLogout(Resource):
-
     @oidc_validate
     def delete(self, user_id):
         """

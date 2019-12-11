@@ -8,7 +8,10 @@ import os
 import time
 
 from keycloak_api_client.keycloak import KeycloakAPIClient
-from tests.utils.keycloak_docker_tools import create_keycloak_docker, tear_down_keycloak_docker
+from tests.utils.keycloak_docker_tools import (
+    create_keycloak_docker,
+    tear_down_keycloak_docker,
+)
 
 SAML_ENTITY_ID = "http://cristi-nuc.cern.ch:5000/saml/metadata/"
 
@@ -44,20 +47,22 @@ class TestKeycloakApiClient(unittest.TestCase):
 
     def setUp(self):
         self.client = KeycloakAPIClient(
-            self.server, "test", "keycloak-rest-adapter", "111d61ea-b890-4285-b742-e0c417c5e513")
+            self.server,
+            "test",
+            "keycloak-rest-adapter",
+            "111d61ea-b890-4285-b742-e0c417c5e513",
+        )
 
     def test_create_oidc_client(self):
         self.client.delete_client_by_clientID(OIDC_CLIENT_ID)
-        created = self.client.create_new_openid_client(**{
-            "protocol": "openid",
-            "clientId": OIDC_CLIENT_ID
-        })
+        created = self.client.create_new_openid_client(
+            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
+        )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
     def test_create_saml_client_with_xml_converter(self):
         self.client.delete_client_by_clientID(SAML_ENTITY_ID)
-        client_description = self.client.client_description_converter(
-            SAML_DESCRIPTOR)
+        client_description = self.client.client_description_converter(SAML_DESCRIPTOR)
         self.assertIsNotNone(client_description)
         self.assertEqual("saml", client_description["protocol"])
 
@@ -65,39 +70,35 @@ class TestKeycloakApiClient(unittest.TestCase):
         self.assertIsNotNone(created)
         self.assertEqual(SAML_ENTITY_ID, created["clientId"])
         self.assertListEqual(
-            ["http://cristi-nuc.cern.ch:5000/saml/acs/"], created["redirectUris"])
+            ["http://cristi-nuc.cern.ch:5000/saml/acs/"], created["redirectUris"]
+        )
 
     def test_refresh_token_oidc_client(self):
         self.client.delete_client_by_clientID(OIDC_CLIENT_ID)
-        created = self.client.create_new_openid_client(**{
-            "protocol": "openid",
-            "clientId": OIDC_CLIENT_ID
-        })
+        created = self.client.create_new_openid_client(
+            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
+        )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
-        recreated_token = self.client.regenerate_client_secret(
-            OIDC_CLIENT_ID).json()
+        recreated_token = self.client.regenerate_client_secret(OIDC_CLIENT_ID).json()
         self.assertIsNotNone(recreated_token)
         self.assertTrue("value" in recreated_token)
         self.assertTrue("type" in recreated_token)
         self.assertEqual("secret", recreated_token["type"])
 
     def test_delete_not_found(self):
-        delete_response = self.client.delete_client_by_clientID(
-            "some_missing_client")
+        delete_response = self.client.delete_client_by_clientID("some_missing_client")
 
         self.assertIsNone(delete_response)
 
     def test_recreate_secret_oidc_client(self):
         self.client.delete_client_by_clientID(OIDC_CLIENT_ID)
-        created = self.client.create_new_openid_client(**{
-            "protocol": "openid",
-            "clientId": OIDC_CLIENT_ID
-        })
+        created = self.client.create_new_openid_client(
+            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
+        )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
-        recreated_token = self.client.regenerate_client_secret(
-            OIDC_CLIENT_ID).json()
+        recreated_token = self.client.regenerate_client_secret(OIDC_CLIENT_ID).json()
         self.assertIsNotNone(recreated_token)
         self.assertTrue("value" in recreated_token)
         self.assertTrue("type" in recreated_token)
@@ -105,15 +106,15 @@ class TestKeycloakApiClient(unittest.TestCase):
 
     def test_update_oidc_client_updates_properties(self):
         self.client.delete_client_by_clientID(OIDC_CLIENT_ID)
-        created = self.client.create_new_openid_client(**{
-            "protocol": "openid",
-            "clientId": OIDC_CLIENT_ID
-        })
+        created = self.client.create_new_openid_client(
+            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
+        )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
         description = "some new description"
         updated = self.client.update_client_properties(
-            OIDC_CLIENT_ID, description=description)
+            OIDC_CLIENT_ID, description=description
+        )
         print(updated)
         self.assertEqual(OIDC_CLIENT_ID, updated["clientId"])
         self.assertEqual(description, updated["description"])

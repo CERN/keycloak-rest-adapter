@@ -4,6 +4,7 @@ import json
 import requests
 from log_utils import configure_logging
 
+
 class KeycloakAPIClient(object):
 
     # To be investigated:
@@ -14,12 +15,7 @@ class KeycloakAPIClient(object):
     """
 
     def __init__(
-        self,
-        server,
-        realm,
-        client_id,
-        client_secret,
-        master_realm="master",
+        self, server, realm, client_id, client_secret, master_realm="master",
     ):
         """
         Initialize the class with the params needed to use the API.
@@ -50,10 +46,14 @@ class KeycloakAPIClient(object):
         self.access_token_object = None
 
         # danielfr quick hack, in non master realms "master-realm" client is replaced by "realm-management"
-        if realm == 'master':
-            self.master_realm_client = self.get_client_by_clientID("master-realm", self.realm)
+        if realm == "master":
+            self.master_realm_client = self.get_client_by_clientID(
+                "master-realm", self.realm
+            )
         else:
-            self.master_realm_client = self.get_client_by_clientID("realm-management", self.realm)
+            self.master_realm_client = self.get_client_by_clientID(
+                "realm-management", self.realm
+            )
 
     def __send_request(self, request_type, url, **kwargs):
         # if there is 'headers' in kwargs use it instead of default class one
@@ -70,7 +70,9 @@ class KeycloakAPIClient(object):
         elif request_type.lower() == "put":
             ret = self.session.put(url=url, headers=r_headers, **kwargs)
         else:
-            raise Exception("Specified request_type '{0}' not supported".format(request_type))
+            raise Exception(
+                "Specified request_type '{0}' not supported".format(request_type)
+            )
         return ret
 
     def send_request(self, request_type, url, **kwargs):
@@ -116,7 +118,10 @@ class KeycloakAPIClient(object):
         status: boolean value to enable/disable permissions
         """
         self.logger.info(
-            "Setting client '{0}' fine grain permissions to '{1}'".format(clientid, status))
+            "Setting client '{0}' fine grain permissions to '{1}'".format(
+                clientid, status
+            )
+        )
         headers = self.__get_admin_access_token_headers()
         data = {"enabled": status}
         url = "{0}/admin/realms/{1}/clients/{2}/management/permissions".format(
@@ -148,19 +153,22 @@ class KeycloakAPIClient(object):
         }
         """
         headers = self.__get_admin_access_token_headers()
-        self.logger.info("Creating mapper with the following configuration: {0}".format(kwargs))
+        self.logger.info(
+            "Creating mapper with the following configuration: {0}".format(kwargs)
+        )
         client_object = self.get_client_by_clientID(client_id)
         if client_object:
-            url = '{0}/admin/realms/{1}/clients/{2}/protocol-mappers/models'.format(
-            self.base_url, self.realm, client_object['id'])
+            url = "{0}/admin/realms/{1}/clients/{2}/protocol-mappers/models".format(
+                self.base_url, self.realm, client_object["id"]
+            )
             ret = self.send_request(
-                    'post',
-                     url,
-                     data=json.dumps(kwargs),
-                     headers=headers)
+                "post", url, data=json.dumps(kwargs), headers=headers
+            )
             return ret
         else:
-            self.logger.info("Cannot update client '{0}' mappers. Client not found".format(client_id))
+            self.logger.info(
+                "Cannot update client '{0}' mappers. Client not found".format(client_id)
+            )
             return
 
     def update_client_mappers(self, client_id, mapper_name, **kwargs):
@@ -172,37 +180,52 @@ class KeycloakAPIClient(object):
         --> user.attribute:	<string>, userinfo.token.claim: <bool>
         """
         headers = self.__get_admin_access_token_headers()
-        self.logger.info("Updating mapper with the following configuration: {0}".format(kwargs))
+        self.logger.info(
+            "Updating mapper with the following configuration: {0}".format(kwargs)
+        )
         client_object = self.get_client_by_clientID(client_id)
         if client_object:
-            if 'protocolMappers' in client_object:
-                for mapper in client_object['protocolMappers']:
-                    if mapper['name'] == mapper_name:
-                        url = '{0}/admin/realms/{1}/clients/{2}/protocol-mappers/models/{3}'.format(
-                        self.base_url, self.realm, client_object['id'], mapper['id'])
+            if "protocolMappers" in client_object:
+                for mapper in client_object["protocolMappers"]:
+                    if mapper["name"] == mapper_name:
+                        url = "{0}/admin/realms/{1}/clients/{2}/protocol-mappers/models/{3}".format(
+                            self.base_url, self.realm, client_object["id"], mapper["id"]
+                        )
                         updated_mapper = mapper
                         for key in kwargs:
-                            if mapper['config'].has_key(key):
-                                updated_mapper['config'][key] = kwargs[key]
+                            if mapper["config"].has_key(key):
+                                updated_mapper["config"][key] = kwargs[key]
                             else:
-                                self.logger.error("'{0}' not a valid mapper attribute. Mapper not updated".format(key))
-                                return # not update and return empty
+                                self.logger.error(
+                                    "'{0}' not a valid mapper attribute. Mapper not updated".format(
+                                        key
+                                    )
+                                )
+                                return  # not update and return empty
 
                         ret = self.send_request(
-                                'put',
-                                url,
-                                data=json.dumps(updated_mapper),
-                                headers=headers)
+                            "put", url, data=json.dumps(updated_mapper), headers=headers
+                        )
                         return ret
 
-                self.logger.info("Cannot mapper '{0}' for client '{1}'. Protocol mapper not found".format(mapper_name, client_id))
+                self.logger.info(
+                    "Cannot mapper '{0}' for client '{1}'. Protocol mapper not found".format(
+                        mapper_name, client_id
+                    )
+                )
                 return
 
             else:
-                self.logger.info("Cannot update client '{0}' mapper. Client mappers not found".format(client_id))
+                self.logger.info(
+                    "Cannot update client '{0}' mapper. Client mappers not found".format(
+                        client_id
+                    )
+                )
                 return
         else:
-            self.logger.info("Cannot update client '{0}' mappers. Client not found".format(client_id))
+            self.logger.info(
+                "Cannot update client '{0}' mappers. Client not found".format(client_id)
+            )
             return
 
     def update_client_properties(self, client_id, **kwargs):
@@ -226,9 +249,7 @@ class KeycloakAPIClient(object):
                     client_object[key] = value
                 else:
                     self.logger.warn(
-                        "'{0}' not a valid client property. Skipping...".format(
-                            key
-                        )
+                        "'{0}' not a valid client property. Skipping...".format(key)
                     )
 
             ret = self.send_request(
@@ -243,7 +264,11 @@ class KeycloakAPIClient(object):
             )
             return updated_client
         else:
-            self.logger.info("Cannot update client '{0}' properties. Client not found".format(client_id))
+            self.logger.info(
+                "Cannot update client '{0}' properties. Client not found".format(
+                    client_id
+                )
+            )
             return
 
     def client_description_converter(self, payload):
@@ -269,14 +294,12 @@ class KeycloakAPIClient(object):
         headers = self.__get_admin_access_token_headers()
         client_object = self.get_client_by_clientID(client_id)
         if client_object:
-            if client_object['protocol'] == 'openid-connect':
-                url = '{0}/admin/realms/{1}/clients/{2}/client-secret'.format(
-                     self.base_url, self.realm, client_object['id'])
+            if client_object["protocol"] == "openid-connect":
+                url = "{0}/admin/realms/{1}/clients/{2}/client-secret".format(
+                    self.base_url, self.realm, client_object["id"]
+                )
 
-                ret = self.send_request(
-                    'get',
-                    url,
-                    headers=headers)
+                ret = self.send_request("get", url, headers=headers)
             else:
                 ret = requests.Response  # new empty response
                 ret.text = "Cannot display client '{0}' secret. Client not openid type".format(
@@ -285,7 +308,9 @@ class KeycloakAPIClient(object):
                 self.logger.info(ret.text)
             return ret
         else:
-            self.logger.info("Cannot display client '{0}' secret. Client not found".format(client_id))
+            self.logger.info(
+                "Cannot display client '{0}' secret. Client not found".format(client_id)
+            )
 
     def regenerate_client_secret(self, client_id):
         """
@@ -295,14 +320,12 @@ class KeycloakAPIClient(object):
         headers = self.__get_admin_access_token_headers()
         client_object = self.get_client_by_clientID(client_id)
         if client_object:
-            if client_object['protocol'] == 'openid-connect':
-                url = '{0}/admin/realms/{1}/clients/{2}/client-secret'.format(
-                     self.base_url, self.realm, client_object['id'])
+            if client_object["protocol"] == "openid-connect":
+                url = "{0}/admin/realms/{1}/clients/{2}/client-secret".format(
+                    self.base_url, self.realm, client_object["id"]
+                )
 
-                ret = self.send_request(
-                    'post',
-                    url,
-                    headers=headers)
+                ret = self.send_request("post", url, headers=headers)
                 self.logger.info("Client '{0}' secret regenerated".format(client_id))
             else:
                 ret = requests.Response  # new empty response
@@ -312,7 +335,11 @@ class KeycloakAPIClient(object):
                 self.logger.info(ret.text)
             return ret
         else:
-            self.logger.info("Cannot regenerate client '{0}' secret. Client not found".format(client_id))
+            self.logger.info(
+                "Cannot regenerate client '{0}' secret. Client not found".format(
+                    client_id
+                )
+            )
 
     def delete_client_by_clientID(self, client_id):
         """
@@ -325,10 +352,7 @@ class KeycloakAPIClient(object):
                 self.base_url, self.realm, client_object["id"]
             )
 
-            ret = self.send_request(
-                'delete',
-                url,
-                headers=headers)
+            ret = self.send_request("delete", url, headers=headers)
             self.logger.info("Deleted client '{0}'".format(client_id))
             return ret
         else:
@@ -351,7 +375,9 @@ class KeycloakAPIClient(object):
 
         # keycloak returns a list of 1 element if found, empty if not
         if len(client) == 1:
-            self.logger.info("Found client '{0}' ({1})".format(client_id, client[0]['id']))
+            self.logger.info(
+                "Found client '{0}' ({1})".format(client_id, client[0]["id"])
+            )
             return client[0]
         else:
             self.logger.info("Client '{0}' NOT found".format(client_id))
@@ -387,7 +413,9 @@ class KeycloakAPIClient(object):
         Create client policy for the given clientid
         clientid: ID string of the client. E.g: 6781736b-e1f7-4ff7-a883-f4168c4dbd8a
         """
-        self.logger.info("Creating policy new '{0}' for client {1}".format(policy_name, clientid))
+        self.logger.info(
+            "Creating policy new '{0}' for client {1}".format(policy_name, clientid)
+        )
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/policy/client".format(
             self.base_url, self.realm, self.master_realm_client["id"]
@@ -399,18 +427,23 @@ class KeycloakAPIClient(object):
         if len(client_policy) == 0:
             # create new policy
             self.logger.info(
-                "It does not exist. Creating new policy and subscribing it to client '{0}'".format(clientid))
-            http_method = 'post'
+                "It does not exist. Creating new policy and subscribing it to client '{0}'".format(
+                    clientid
+                )
+            )
+            http_method = "post"
             subscribed_clients = [clientid]
 
         else:
             # update already existing policy
             self.logger.info(
-                "There is an exisintg policy with name {0}. Updating it to subscribe client '{1}'".format(policy_name, clientid))
-            url = url + "/{0}".format(client_policy[0]['id'])
-            http_method = 'put'
-            subscribed_clients = json.loads(
-                client_policy[0]['config']['clients'])
+                "There is an exisintg policy with name {0}. Updating it to subscribe client '{1}'".format(
+                    policy_name, clientid
+                )
+            )
+            url = url + "/{0}".format(client_policy[0]["id"])
+            http_method = "put"
+            subscribed_clients = json.loads(client_policy[0]["config"]["clients"])
             subscribed_clients.append(clientid)
 
         data = {
@@ -433,8 +466,9 @@ class KeycloakAPIClient(object):
         permission_name: authorization permission name to get
         ret: Matching Authorization permission object
         """
-        self.logger.info("Getting authorization permission '{0}' object".format(
-                    permission_name))
+        self.logger.info(
+            "Getting authorization permission '{0}' object".format(permission_name)
+        )
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/permission/".format(
             self.base_url, self.realm, self.master_realm_client["id"]
@@ -466,7 +500,8 @@ class KeycloakAPIClient(object):
         clientid: ID string of the client. E.g: 6781736b-e1f7-4ff7-a883-f4168c4dbd8a
         """
         self.logger.info(
-            "Getting token-exhange permission for client '{0}'...".format(clientid))
+            "Getting token-exhange permission for client '{0}'...".format(clientid)
+        )
         token_exchange_permission_name = "token-exchange.permission.client.{0}".format(
             clientid
         )
@@ -495,10 +530,15 @@ class KeycloakAPIClient(object):
         self.create_client_policy(requestor_clientid, policy_name, policy_description)
         policy = self.get_client_policy_by_name(policy_name)[0]
 
-        self.logger.info("Granting token-exhange between client '{0}' and '{1}'".format(
-                    target_clientid, requestor_clientid))
-        policies.append(policy['id'])
-        return self.update_token_exchange_permissions(client_token_exchange_permission, policies)
+        self.logger.info(
+            "Granting token-exhange between client '{0}' and '{1}'".format(
+                target_clientid, requestor_clientid
+            )
+        )
+        policies.append(policy["id"])
+        return self.update_token_exchange_permissions(
+            client_token_exchange_permission, policies
+        )
 
     def revoke_token_exchange_permissions(self, target_clientid, requestor_clientid):
         """
@@ -516,16 +556,26 @@ class KeycloakAPIClient(object):
         policy_name = "allow token exchange for {0}".format(requestor_clientid)
         policy = self.get_client_policy_by_name(policy_name)[0]
         try:
-            policies.remove(policy['id'])
+            policies.remove(policy["id"])
         except ValueError:
-            raise ValueError("Token exchange permissions not found between client '{0}' and '{1}'".format(
-                    target_clientid, requestor_clientid))
+            raise ValueError(
+                "Token exchange permissions not found between client '{0}' and '{1}'".format(
+                    target_clientid, requestor_clientid
+                )
+            )
 
-        self.logger.info("Revoking token-exhange between client '{0}' and '{1}'".format(
-                    target_clientid, requestor_clientid))
-        return self.update_token_exchange_permissions(client_token_exchange_permission, policies)
+        self.logger.info(
+            "Revoking token-exhange between client '{0}' and '{1}'".format(
+                target_clientid, requestor_clientid
+            )
+        )
+        return self.update_token_exchange_permissions(
+            client_token_exchange_permission, policies
+        )
 
-    def update_token_exchange_permissions(self, client_token_exchange_permission, policies):
+    def update_token_exchange_permissions(
+        self, client_token_exchange_permission, policies
+    ):
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/permission/scope/{3}".format(
             self.base_url,
@@ -537,7 +587,7 @@ class KeycloakAPIClient(object):
         if len(policies) > 0:
             client_token_exchange_permission["decisionStrategy"] = "AFFIRMATIVE"
 
-        client_token_exchange_permission['policies'] = policies
+        client_token_exchange_permission["policies"] = policies
         ret = self.send_request(
             "put",
             url,
@@ -591,12 +641,16 @@ class KeycloakAPIClient(object):
             self.base_url, self.master_realm
         )
 
-        grant_type = 'client_credentials'
+        grant_type = "client_credentials"
         payload = "scope=openid&grant_type={0}&client_id={1}&client_secret={2}".format(
             grant_type, self.client_id, self.client_secret
         )
 
-        self.logger.info("Getting admin access token using {} client credentials".format(self.client_id))
+        self.logger.info(
+            "Getting admin access token using {} client credentials".format(
+                self.client_id
+            )
+        )
         ret = self.send_request("post", url, data=payload)
         if ret.status_code != 200:
             self.logger.error(
@@ -679,11 +733,11 @@ class KeycloakAPIClient(object):
         Logs out the user from all his sessions
         """
         access_token = self.get_access_token()
-        url = '{0}/admin/realms/{1}/users/{2}/logout'.format(
+        url = "{0}/admin/realms/{1}/users/{2}/logout".format(
             self.base_url, self.realm, user_id
         )
         self.logger.info("Logging out user ID '{0}'".format(user_id))
-        return self.send_request('post', url)
+        return self.send_request("post", url)
 
     def create_new_openid_client(self, **kwargs):
         """Add new OPENID client.
@@ -707,10 +761,12 @@ class KeycloakAPIClient(object):
         response = self.__create_client(access_token, **kwargs)
         if response.ok:
             # Hack in order to set consent_required to false if it's actually specified, not just ignore it
-            # See: https://www.keycloak.org/docs/latest/securing_apps/index.html#client-registration-policies 
+            # See: https://www.keycloak.org/docs/latest/securing_apps/index.html#client-registration-policies
             # (Consent Required Policy) section
             json_response = response.json()
-            update_response = self.update_client_properties(json_response["clientId"], **kwargs)
+            update_response = self.update_client_properties(
+                json_response["clientId"], **kwargs
+            )
             update_response["secret"] = json_response["secret"]
             return update_response
         return response.json()
@@ -747,7 +803,9 @@ class KeycloakAPIClient(object):
         if not realm:
             realm = self.realm
         headers = self.__get_admin_access_token_headers()
-        url = "{0}/admin/realms/{1}/users?first=0&max=1&search={2}".format(self.base_url, realm, username)
+        url = "{0}/admin/realms/{1}/users?first=0&max=1&search={2}".format(
+            self.base_url, realm, username
+        )
 
         ret = self.send_request("get", url, headers=headers)
 
@@ -755,8 +813,8 @@ class KeycloakAPIClient(object):
         user = json.loads(ret.text)
 
         # keycloak returns a list of 1 element if found, empty if not
-        if len(user) == 1 and user[0]['username'] == username:
-            self.logger.info("Found user '{0}' ({1})".format(username, user[0]['id']))
+        if len(user) == 1 and user[0]["username"] == username:
+            self.logger.info("Found user '{0}' ({1})".format(username, user[0]["id"]))
             return user[0]
         else:
             self.logger.info("User '{0}' NOT found".format(username))
@@ -778,19 +836,15 @@ class KeycloakAPIClient(object):
                     user_object[key] = value
                 else:
                     self.logger.warn(
-                        "'{0}' not a valid client property. Skipping...".format(
-                            key
-                        )
+                        "'{0}' not a valid client property. Skipping...".format(key)
                     )
-            self.send_request(
-                "put", url, data=json.dumps(user_object), headers=headers
-            )
+            self.send_request("put", url, data=json.dumps(user_object), headers=headers)
 
             updated_user = self.get_user_by_username(username)
-            self.logger.info(
-                "User '{0}' updated: {1}".format(username, updated_user)
-            )
+            self.logger.info("User '{0}' updated: {1}".format(username, updated_user))
             return updated_user
         else:
-            self.logger.info("Cannot update user '{0}' properties. User not found".format(username))
+            self.logger.info(
+                "Cannot update user '{0}' properties. User not found".format(username)
+            )
             return
