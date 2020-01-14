@@ -146,7 +146,7 @@ class TokenExchangePermissions(Resource):
             return verify_error
 
         ret = keycloak_client.grant_token_exchange_permissions(
-            target_client["id"], requestor_client["id"]
+            target_client, requestor_client
         )
         if ret.status_code == 200 or ret.status_code == 201:
             return ret.reason, 200
@@ -166,7 +166,7 @@ class TokenExchangePermissions(Resource):
             return verify_error
         try:
             ret = keycloak_client.revoke_token_exchange_permissions(
-                target_client["id"], requestor_client["id"]
+                target_client, requestor_client
             )
         except ValueError as e:
             return e.args[0], 404

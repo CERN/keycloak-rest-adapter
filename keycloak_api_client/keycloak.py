@@ -507,15 +507,20 @@ class KeycloakAPIClient(object):
         )
         return self.get_auth_permission_by_name(token_exchange_permission_name)[0]
 
-    def grant_token_exchange_permissions(self, target_clientid, requestor_clientid):
+    def grant_token_exchange_permissions(self, target_client_object, requestor_client_object):
         """
         Grant token-exchange permission for target client to destination client
-        target_clientid: ID string of the target client. E.g: myapp-foo
-        requestor_clientid: ID string of the client to exchange its token for target_clientid E.g: myapp-bar
+        target_client_object: Object of the target client
+        requestor_client_object: Object of the requestor client
         """
-        self.set_client_fine_grain_permission(target_clientid, True)
+        requestor_clientid = requestor_client_object["clientId"]
+        requestor_id = requestor_client_object["id"]
+        target_clientid = target_client_object["clientId"]
+        target_id = target_client_object["id"]
+
+        self.set_client_fine_grain_permission(target_id, True)
         client_token_exchange_permission = self.get_client_token_exchange_permission(
-            target_clientid
+            target_id
         )
         tep_associated_policies = self.get_permission_associated_policies(
             client_token_exchange_permission["id"]
@@ -527,7 +532,7 @@ class KeycloakAPIClient(object):
             requestor_clientid
         )
 
-        self.create_client_policy(requestor_clientid, policy_name, policy_description)
+        self.create_client_policy(requestor_id, policy_name, policy_description)
         policy = self.get_client_policy_by_name(policy_name)[0]
 
         self.logger.info(
@@ -540,21 +545,39 @@ class KeycloakAPIClient(object):
             client_token_exchange_permission, policies
         )
 
-    def revoke_token_exchange_permissions(self, target_clientid, requestor_clientid):
+    def revoke_token_exchange_permissions(self, target_client_object, requestor_client_object):
         """
         Revoke token-exchange permission for target client to destination client
-        target_clientid: ID string of the target client. E.g: myapp-foo
-        requestor_clientid: ID string of the client to exchange its token for target_clientid E.g: myapp-bar
+        target_client_object: Object of the target client
+        requestor_client_object: Object of the requestor client
         """
+        requestor_clientid = requestor_client_object["clientId"]
+        requestor_id = requestor_client_object["id"]
+        target_clientid = target_client_object["clientId"]
+        target_id = target_client_object["id"]
+
         client_token_exchange_permission = self.get_client_token_exchange_permission(
-            target_clientid
+            target_id
         )
         tep_associated_policies = self.get_permission_associated_policies(
             client_token_exchange_permission["id"]
         )
         policies = [policy["id"] for policy in tep_associated_policies]
         policy_name = "allow token exchange for {0}".format(requestor_clientid)
-        policy = self.get_client_policy_by_name(policy_name)[0]
+        policy = self.get_client_policy_by_name(policy_name)
+
+        if len(policy) == 0:
+            # policy not found. It might be using the old naming convention...
+            policy_name_old = "allow token exchange for {0}".format(requestor_id)
+            self.logger.info(
+                "Policy '{0}' not found. Trying using the old naming convention '{1}'".format(
+                    policy_name, policy_name_old
+                )
+            )
+            policy = self.get_client_policy_by_name(policy_name_old)[0]
+        else:
+            policy = policy[0]
+
         try:
             policies.remove(policy["id"])
         except ValueError:
@@ -563,7 +586,6 @@ class KeycloakAPIClient(object):
                     target_clientid, requestor_clientid
                 )
             )
-
         self.logger.info(
             "Revoking token-exhange between client '{0}' and '{1}'".format(
                 target_clientid, requestor_clientid
