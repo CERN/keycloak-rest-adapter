@@ -107,6 +107,7 @@ user_ns = api.namespace("user", description="Methods for handling user operation
 
 # Models
 model = ns.model("Payload", {"clientId": fields.String}, required=False)
+authenticator_model = ns.model("Payload", {"enabled": fields.Boolean}, required=True)
 
 # OIDC configuration
 app.config.update(
@@ -362,7 +363,7 @@ class UserDetails(Resource):
     def put(self, username):
         """Update a user"""
         data = get_request_data(request)
-        updated_user = keycloak_client.update_user_properties(username, **data)
+        updated_user = keycloak_client.update_user_properties(username, keycloak_client.realm, **data)
         if updated_user:
             return jsonify(updated_user)
         else:
@@ -372,6 +373,42 @@ class UserDetails(Resource):
                 ),
                 400,
             )
+
+
+@user_ns.route("/<username>/authenticator/otp")
+class OTP(Resource):
+    @user_ns.doc(body=authenticator_model)
+    @oidc_validate
+    def put(self, username):
+        """Enables or disables OTP for a user"""
+        data = get_request_data(request)
+        if 'enabled' in data.keys():
+            if data['enabled']:
+                keycloak_client.enable_otp_for_user(username)
+                return "OTP Enabled", 200
+            else:
+                keycloak_client.disable_otp_for_user(username)
+                return "OTP Disabled", 200
+        else:
+            return "This path only accepts a JSON object with the field 'enabled': true/false", 400
+
+
+@user_ns.route("/<username>/authenticator/webauthn")
+class WebAuthn(Resource):
+    @user_ns.doc(body=authenticator_model)
+    @oidc_validate
+    def put(self, username):
+        """Enables or disables Webauthn for a user"""
+        data = get_request_data(request)
+        if 'enabled' in data.keys():
+            if data['enabled']:
+                keycloak_client.enable_webauthn_for_user(username)
+                return "WebAuthn Enabled", 200
+            else:
+                keycloak_client.disable_webauthn_for_user(username)
+                return "WebAuthn Disabled", 200
+        else:
+            return "This path only accepts a JSON object with the field 'enabled': true/false", 400
 
 
 if __name__ == "__main__":

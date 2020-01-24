@@ -15,7 +15,7 @@ class KeycloakAPIClient(object):
     """
 
     def __init__(
-        self, server, realm, client_id, client_secret, master_realm="master",
+        self, server, realm, client_id, client_secret, master_realm="master", mfa_realm="mfa",
     ):
         """
         Initialize the class with the params needed to use the API.
@@ -30,6 +30,7 @@ class KeycloakAPIClient(object):
         self.client_id = client_id
         self.client_secret = client_secret
         self.master_realm = master_realm
+        self.mfa_realm = mfa_realm
 
         self.base_url = "{}/auth".format(self.keycloak_server)
         self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
@@ -44,6 +45,12 @@ class KeycloakAPIClient(object):
             )
         )
         self.access_token_object = None
+
+        # Keycloak constants
+        self.CREDENTIAL_TYPE_OTP = 'otp'
+        self.CREDENTIAL_TYPE_WEBAUTHN = 'webauthn'
+        self.REQUIRED_ACTION_CONFIGURE_OTP = 'CONFIGURE_TOTP'
+        self.REQUIRED_ACTION_WEBAUTHN_REGISTER = 'webauthn-register'
 
         # danielfr quick hack, in non master realms "master-realm" client is replaced by "realm-management"
         if realm == "master":
@@ -842,15 +849,15 @@ class KeycloakAPIClient(object):
             self.logger.info("User '{0}' NOT found".format(username))
             return None
 
-    def update_user_properties(self, username, **kwargs):
+    def update_user_properties(self, username, realm, **kwargs):
         """
         Update user properties
         """
         headers = self.__get_admin_access_token_headers()
-        user_object = self.get_user_by_username(username)
+        user_object = self.get_user_by_username(username, realm)
         if user_object:
             url = "{0}/admin/realms/{1}/users/{2}".format(
-                self.base_url, self.realm, user_object["id"]
+                self.base_url, realm, user_object["id"]
             )
             for key, value in kwargs.items():
                 if key in user_object:
@@ -870,3 +877,60 @@ class KeycloakAPIClient(object):
                 "Cannot update user '{0}' properties. User not found".format(username)
             )
             return
+
+    def get_user_id_and_credentials(self, username):
+        headers = self.__get_admin_access_token_headers()
+        user = self.get_user_by_username(username, self.mfa_realm)
+        url = "{0}/admin/realms/{1}/users/{2}/credentials".format(
+            self.base_url, self.mfa_realm, user['id']
+        )
+        ret = self.send_request("get", url, headers=headers)
+        self.logger.info("Getting credentials for user '{0}'".format(username))
+        credentials = json.loads(ret.text)
+        return user['id'], credentials
+
+    def delete_user_credential_by_id(self, user_id, credential_id):
+        headers = self.__get_admin_access_token_headers()
+        url = "{0}/admin/realms/{1}/users/{2}/credentials/{3}".format(
+            self.base_url, self.mfa_realm, user_id, credential_id
+        )
+        ret = self.send_request("delete", url, headers=headers)
+        self.logger.info("Deleted credential with ID {0} from user {1}".format(credential_id, user_id))
+        return ret
+
+    def delete_user_credential_by_type(self, username, credential_type):
+        user_id, credentials = self.get_user_id_and_credentials(username)
+        for credential in credentials:
+            if credential['type'] == credential_type:
+                self.delete_user_credential_by_id(user_id, credential['id'])
+        return
+
+    def delete_user_required_action_if_exists(self, username, required_action):
+        user = self.get_user_by_username(username, self.mfa_realm)
+        required_actions = user['requiredActions']
+        try:
+            required_actions.remove(required_action)
+        except:
+            pass
+        self.update_user_properties(username, self.mfa_realm, requiredActions=required_actions)
+
+    def enable_otp_for_user(self, username):
+        user = self.get_user_by_username(username, self.mfa_realm)
+        required_actions = user['requiredActions']
+        required_actions.append(self.REQUIRED_ACTION_CONFIGURE_OTP)
+        self.update_user_properties(username, self.mfa_realm, requiredActions=required_actions)
+
+    def enable_webauthn_for_user(self, username):
+        user = self.get_user_by_username(username, self.mfa_realm)
+        required_actions = user['requiredActions']
+        required_actions.append(self.REQUIRED_ACTION_WEBAUTHN_REGISTER)
+        self.update_user_properties(username, self.mfa_realm, requiredActions=required_actions)
+
+    def disable_otp_for_user(self, username):
+        self.delete_user_credential_by_type(username, self.CREDENTIAL_TYPE_OTP)
+        self.delete_user_required_action_if_exists(username, self.REQUIRED_ACTION_CONFIGURE_OTP)
+
+    def disable_webauthn_for_user(self, username):
+        self.delete_user_credential_by_type(username, self.CREDENTIAL_TYPE_WEBAUTHN)
+        self.delete_user_required_action_if_exists(username, self.REQUIRED_ACTION_WEBAUTHN_REGISTER)
+    
