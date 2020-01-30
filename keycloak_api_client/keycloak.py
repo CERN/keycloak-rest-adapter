@@ -3,6 +3,7 @@
 import json
 import requests
 from log_utils import configure_logging
+from utils import ResourceNotFoundError
 
 
 class KeycloakAPIClient(object):
@@ -15,7 +16,13 @@ class KeycloakAPIClient(object):
     """
 
     def __init__(
-        self, server, realm, client_id, client_secret, master_realm="master", mfa_realm="mfa",
+        self,
+        server,
+        realm,
+        client_id,
+        client_secret,
+        master_realm="master",
+        mfa_realm="mfa",
     ):
         """
         Initialize the class with the params needed to use the API.
@@ -47,10 +54,10 @@ class KeycloakAPIClient(object):
         self.access_token_object = None
 
         # Keycloak constants
-        self.CREDENTIAL_TYPE_OTP = 'otp'
-        self.CREDENTIAL_TYPE_WEBAUTHN = 'webauthn'
-        self.REQUIRED_ACTION_CONFIGURE_OTP = 'CONFIGURE_TOTP'
-        self.REQUIRED_ACTION_WEBAUTHN_REGISTER = 'webauthn-register'
+        self.CREDENTIAL_TYPE_OTP = "otp"
+        self.CREDENTIAL_TYPE_WEBAUTHN = "webauthn"
+        self.REQUIRED_ACTION_CONFIGURE_OTP = "CONFIGURE_TOTP"
+        self.REQUIRED_ACTION_WEBAUTHN_REGISTER = "webauthn-register"
 
         # danielfr quick hack, in non master realms "master-realm" client is replaced by "realm-management"
         if realm == "master":
@@ -514,7 +521,9 @@ class KeycloakAPIClient(object):
         )
         return self.get_auth_permission_by_name(token_exchange_permission_name)[0]
 
-    def grant_token_exchange_permissions(self, target_client_object, requestor_client_object):
+    def grant_token_exchange_permissions(
+        self, target_client_object, requestor_client_object
+    ):
         """
         Grant token-exchange permission for target client to destination client
         target_client_object: Object of the target client
@@ -552,7 +561,9 @@ class KeycloakAPIClient(object):
             client_token_exchange_permission, policies
         )
 
-    def revoke_token_exchange_permissions(self, target_client_object, requestor_client_object):
+    def revoke_token_exchange_permissions(
+        self, target_client_object, requestor_client_object
+    ):
         """
         Revoke token-exchange permission for target client to destination client
         target_client_object: Object of the target client
@@ -847,7 +858,7 @@ class KeycloakAPIClient(object):
             return user[0]
         else:
             self.logger.info("User '{0}' NOT found".format(username))
-            return None
+            raise ResourceNotFoundError("User not found")
 
     def update_user_properties(self, username, realm, **kwargs):
         """
@@ -879,71 +890,126 @@ class KeycloakAPIClient(object):
             return
 
     def get_user_id_and_credentials(self, username):
+        """
+        Gets user ID and credentials
+        username: user's username in Keycloak
+        """
         headers = self.__get_admin_access_token_headers()
         user = self.get_user_by_username(username, self.mfa_realm)
         url = "{0}/admin/realms/{1}/users/{2}/credentials".format(
-            self.base_url, self.mfa_realm, user['id']
+            self.base_url, self.mfa_realm, user["id"]
         )
         ret = self.send_request("get", url, headers=headers)
         self.logger.info("Getting credentials for user '{0}'".format(username))
         credentials = json.loads(ret.text)
-        return user['id'], credentials
+        return user["id"], credentials
 
     def delete_user_credential_by_id(self, user_id, credential_id):
+        """
+        Deletes user credential by user_id and credential_id
+        user_id: user's UUID in Keylcoak
+        credential_id: UUID of the credential
+        """
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/users/{2}/credentials/{3}".format(
             self.base_url, self.mfa_realm, user_id, credential_id
         )
         ret = self.send_request("delete", url, headers=headers)
-        self.logger.info("Deleted credential with ID {0} from user {1}".format(credential_id, user_id))
+        self.logger.info(
+            "Deleted credential with ID {0} from user {1}".format(
+                credential_id, user_id
+            )
+        )
         return ret
 
     def delete_user_credential_by_type(self, username, credential_type):
+        """
+        Deletes user credential by credential type
+        username: users's username in Keycloak
+        credential_type: string that matches the 'type' attribute, e.g. "otp"
+        """
         user_id, credentials = self.get_user_id_and_credentials(username)
         for credential in credentials:
-            if credential['type'] == credential_type:
-                self.delete_user_credential_by_id(user_id, credential['id'])
+            if credential["type"] == credential_type:
+                self.delete_user_credential_by_id(user_id, credential["id"])
         return
 
     def delete_user_required_action_if_exists(self, username, required_action):
+        """
+        Deletes user required action if the required action exists
+        username: users's username in Keycloak
+        required_action: string that matches the action type, e.g. "CONFIGURE_TOTP"
+        """
         user = self.get_user_by_username(username, self.mfa_realm)
-        required_actions = user['requiredActions']
+        required_actions = user["requiredActions"]
         try:
             required_actions.remove(required_action)
         except:
             pass
-        self.update_user_properties(username, self.mfa_realm, requiredActions=required_actions)
+        self.update_user_properties(
+            username, self.mfa_realm, requiredActions=required_actions
+        )
 
     def enable_otp_for_user(self, username):
+        """
+        Sets up a required action to configure OTP for a user
+        username: users's username in Keycloak
+        """
         user = self.get_user_by_username(username, self.mfa_realm)
-        required_actions = user['requiredActions']
+        required_actions = user["requiredActions"]
         required_actions.append(self.REQUIRED_ACTION_CONFIGURE_OTP)
-        self.update_user_properties(username, self.mfa_realm, requiredActions=required_actions)
+        self.update_user_properties(
+            username, self.mfa_realm, requiredActions=required_actions
+        )
 
     def enable_webauthn_for_user(self, username):
+        """
+        Sets up a required action to configure WebAuthn for a user
+        username: users's username in Keycloak
+        """
         user = self.get_user_by_username(username, self.mfa_realm)
-        required_actions = user['requiredActions']
+        required_actions = user["requiredActions"]
         required_actions.append(self.REQUIRED_ACTION_WEBAUTHN_REGISTER)
-        self.update_user_properties(username, self.mfa_realm, requiredActions=required_actions)
+        self.update_user_properties(
+            username, self.mfa_realm, requiredActions=required_actions
+        )
 
     def disable_otp_for_user(self, username):
+        """
+        Deletes all OTP-related credentials and required actions
+        username: users's username in Keycloak
+        """
         self.delete_user_credential_by_type(username, self.CREDENTIAL_TYPE_OTP)
-        self.delete_user_required_action_if_exists(username, self.REQUIRED_ACTION_CONFIGURE_OTP)
+        self.delete_user_required_action_if_exists(
+            username, self.REQUIRED_ACTION_CONFIGURE_OTP
+        )
 
     def disable_webauthn_for_user(self, username):
+        """
+        Deletes all WebAuthn related credentials and required actions
+        username: users's username in Keycloak
+        """
         self.delete_user_credential_by_type(username, self.CREDENTIAL_TYPE_WEBAUTHN)
-        self.delete_user_required_action_if_exists(username, self.REQUIRED_ACTION_WEBAUTHN_REGISTER)
-    
-    def is_credential_enabled_for_user(self, username, required_action_type, credential_type):
-        try:
-            user = self.get_user_by_username(username, self.mfa_realm)
-            required_actions = user['requiredActions']
-            if required_action_type in required_actions:
+        self.delete_user_required_action_if_exists(
+            username, self.REQUIRED_ACTION_WEBAUTHN_REGISTER
+        )
+
+    def is_credential_enabled_for_user(
+        self, username, required_action_type, credential_type
+    ):
+        """
+        Returns True if the required action type or credential type is present for a user, False otherwise
+        username: users's username in Keycloak
+        required_action_type: string that matches the action type, e.g. "CONFIGURE_TOTP"
+        credential_type: string that matches the 'type' attribute, e.g. "otp"
+        :return: Boolean
+        """
+        user = self.get_user_by_username(username, self.mfa_realm)
+        required_actions = user["requiredActions"]
+        if required_action_type in required_actions:
+            return True
+        user_id, credentials = self.get_user_id_and_credentials(username)
+        for credential in credentials:
+            if credential["type"] == credential_type:
                 return True
-            user_id, credentials = self.get_user_id_and_credentials(username)
-            for credential in credentials:
-                if credential['type'] == credential_type:
-                    return True
-            return False
-        except:
-            raise NotADirectoryError
+        return False

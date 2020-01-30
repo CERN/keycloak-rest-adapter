@@ -3,11 +3,13 @@ from authlib.jose import jwk, jwt
 from authlib.jose.errors import InvalidClaimError, MissingClaimError
 from authlib.oidc.core import ImplicitIDToken, UserInfo
 from flask import current_app, request
+from flask_restplus import Resource
 
 from utils import json_response
 
 AUTHORIZED_APPS = ["authorization-service-api"]
 API_ACCESS_ROLE = "admin"
+USER_ACTIONS_ROLE = "user"
 
 
 class ImplicitIDTokenNoNonce(ImplicitIDToken):
@@ -41,7 +43,7 @@ def validate_api_access(access_token):
     """
     Verify if the caller entity is allowed to call the API
     :param access_token: The access token that was parsed for the API
-    :return:
+    :return: Boolean
     """
     try:
         if access_token["azp"] in AUTHORIZED_APPS:
@@ -58,11 +60,32 @@ def validate_api_access(access_token):
     return False
 
 
+def validate_user_access(access_token, username):
+    """
+    Verify if the caller entity is allowed to call the API
+    :param access_token: The access token that was parsed for the API
+    :param username: The username expected in the access token
+    :return: Boolean
+    """
+    try:
+        if (
+            USER_ACTIONS_ROLE
+            in access_token["resource_access"][current_app.config["OIDC_CLIENT_ID"]][
+                "roles"
+            ]
+            and access_token["sub"] == username
+        ):
+            return True
+    except Exception as e:
+        current_app.logger.error(e)
+    return False
+
+
 def parse_id_token(id_token):
     """
     Parses an ID token and returns it as a set of user info claims
     :param id_token:
-    :return:
+    :return: Boolean
     """
 
     def load_key(header, payload):
@@ -83,7 +106,7 @@ def parse_id_token(id_token):
     return UserInfo(claims)
 
 
-def oidc_validate(func):
+def oidc_validate_api(func):
     """
     Decorator for validation of the auth token
     """
@@ -93,14 +116,41 @@ def oidc_validate(func):
             auth_header = request.headers["Authorization"]
             token = auth_header.split("Bearer")[1].strip()
             user_info = parse_id_token(token)
-            print(user_info)
+            current_app.logger.debug(user_info)
             if not validate_api_access(user_info):
-                current_app.logger.error("User is not allowed to access the API")
+                current_app.logger.error(
+                    "User is not allowed to access the API as an administrator"
+                )
                 return json_response("Unauthorized", 401)
         except Exception as e:
             current_app.logger.error(f"Authentication error: {e}")
             return json_response("Unauthorized", 401)
-
         return func(*args, **kwargs)
+
+    return function_wrapper
+
+
+def oidc_validate_user_or_api(func):
+    """
+    Decorator for validation of the auth token
+    """
+
+    def function_wrapper(resource: Resource, username: str, *args, **kwargs):
+        try:
+            auth_header = request.headers["Authorization"]
+            token = auth_header.split("Bearer")[1].strip()
+            user_info = parse_id_token(token)
+            current_app.logger.debug(user_info)
+            user_access = validate_user_access(user_info, username)
+            api_access = validate_api_access(user_info)
+            if not user_access and not api_access:
+                current_app.logger.error(
+                    "User is not authorized to access or modify the resource"
+                )
+                return json_response("Unauthorized", 401)
+        except Exception as e:
+            current_app.logger.error(f"Authentication error: {e}")
+            return json_response("Unauthorized", 401)
+        return func(resource, username, *args, **kwargs)
 
     return function_wrapper

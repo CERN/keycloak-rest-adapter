@@ -68,3 +68,7 @@ def validate_protocol_data(data):
             "The request is missing 'protocol'. It must be passed in the form data", 400
         )
     return validate_protocol(data["protocol"])
+
+
+class ResourceNotFoundError(Exception):
+    pass

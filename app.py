@@ -12,7 +12,7 @@ from flask import (
 )
 from flask_restplus import Resource, Api, fields, apidoc
 
-from auth import oidc_validate
+from auth import oidc_validate_api, oidc_validate_user_or_api
 from keycloak_api_client.keycloak import KeycloakAPIClient
 from log_utils import configure_logging
 from utils import (
@@ -23,6 +23,7 @@ from utils import (
     validate_protocol_data,
     config_dir,
     auth_protocols,
+    ResourceNotFoundError,
 )
 
 # Required to have access to keycloak. ca-bundle is on centos
@@ -106,8 +107,19 @@ ns = api.namespace("client", description="Client operations")
 user_ns = api.namespace("user", description="Methods for handling user operations")
 
 # Models
-model = ns.model("Payload", {"clientId": fields.String}, required=False)
-authenticator_model = ns.model("Payload", {"enabled": fields.Boolean}, required=True)
+model = ns.model("Client", {"clientId": fields.String}, required=False)
+user_model = user_ns.model(
+    "User",
+    {
+        "username": fields.String,
+        "enabled": fields.Boolean,
+        "totp": fields.Boolean,
+        "emailVerified": fields.Boolean,
+        "firstName": fields.String,
+        "lastName": fields.String,
+        "email": fields.String,
+    },
+)
 
 # OIDC configuration
 app.config.update(
@@ -133,7 +145,7 @@ def redirect_oauth():
     "/openid/<path:target_client_id>/token-exchange-permissions/<path:requestor_client_id>"
 )
 class TokenExchangePermissions(Resource):
-    @oidc_validate
+    @oidc_validate_api
     def put(self, target_client_id, requestor_client_id):
         """Grants token exchange permissions"""
 
@@ -154,7 +166,7 @@ class TokenExchangePermissions(Resource):
         else:
             return ret.reason, 400
 
-    @oidc_validate
+    @oidc_validate_api
     def delete(self, target_client_id, requestor_client_id):
         """Revokes token exchange permissions"""
         target_client = keycloak_client.get_client_by_clientID(target_client_id)
@@ -193,7 +205,7 @@ class TokenExchangePermissions(Resource):
 @ns.route("/<protocol>/<path:clientId>")
 class ClientDetails(Resource):
     @ns.doc(body=model)
-    @oidc_validate
+    @oidc_validate_api
     def put(self, protocol, clientId):
         """Update a client"""
         data = get_request_data(request)
@@ -210,7 +222,7 @@ class ClientDetails(Resource):
                 400,
             )
 
-    @oidc_validate
+    @oidc_validate_api
     def delete(self, protocol, clientId):
         """Delete a client"""
         validation = validate_protocol(protocol)
@@ -229,7 +241,7 @@ class ClientDetails(Resource):
 
 @ns.route("/openid/<string:clientId>/client-secret")
 class ManageClientSecret(Resource):
-    @oidc_validate
+    @oidc_validate_api
     def get(self, clientId):
         """Show current client secret"""
         ret = keycloak_client.display_client_secret(clientId)
@@ -240,7 +252,7 @@ class ManageClientSecret(Resource):
                 "Cannot display '{0}' secret. Client not found".format(clientId), 404
             )
 
-    @oidc_validate
+    @oidc_validate_api
     def post(self, clientId):
         """Reset client secret"""
         ret = keycloak_client.regenerate_client_secret(clientId)
@@ -319,7 +331,7 @@ class CommonCreator(Resource):
 @ns.route("/<string:protocol>")
 class CreatorDetails(CommonCreator):
     @ns.doc(body=model)
-    @oidc_validate
+    @oidc_validate_api
     def post(self, protocol):
         data = get_request_data(request)
         data["protocol"] = protocol
@@ -332,7 +344,7 @@ class CreatorDetails(CommonCreator):
 @ns.route("/")
 class Creator(CommonCreator):
     @ns.doc(body=model)
-    @oidc_validate
+    @oidc_validate_api
     def post(self):
         data = get_request_data(request)
         validation = validate_protocol_data(data)
@@ -343,7 +355,7 @@ class Creator(CommonCreator):
 
 @user_ns.route("/logout/<string:user_id>")
 class UserLogout(Resource):
-    @oidc_validate
+    @oidc_validate_api
     def delete(self, user_id):
         """
         Logout the user with the specified user_id from all sessions
@@ -358,12 +370,14 @@ class UserLogout(Resource):
 
 @user_ns.route("/<username>")
 class UserDetails(Resource):
-    @user_ns.doc(body=model)
-    @oidc_validate
+    @user_ns.doc(body=user_model)
+    @oidc_validate_api
     def put(self, username):
         """Update a user"""
         data = get_request_data(request)
-        updated_user = keycloak_client.update_user_properties(username, keycloak_client.realm, **data)
+        updated_user = keycloak_client.update_user_properties(
+            username, keycloak_client.realm, **data
+        )
         if updated_user:
             return jsonify(updated_user)
         else:
@@ -377,60 +391,74 @@ class UserDetails(Resource):
 
 @user_ns.route("/<username>/authenticator/otp")
 class OTP(Resource):
-    @oidc_validate
+    @oidc_validate_user_or_api
     def get(self, username):
+        """Gets status of OTP credentials for a user"""
         try:
             is_enabled = keycloak_client.is_credential_enabled_for_user(
                 username,
-                keycloak_client.REQUIRED_ACTION_CONFIGURE_OTP, 
-                keycloak_client.CREDENTIAL_TYPE_OTP)
-            return json_response({'enabled': is_enabled})
-        except NotADirectoryError:
-            return "User not found", 404
+                keycloak_client.REQUIRED_ACTION_CONFIGURE_OTP,
+                keycloak_client.CREDENTIAL_TYPE_OTP,
+            )
+            return json_response({"enabled": is_enabled})
+        except ResourceNotFoundError as e:
+            return str(e), 404
 
-    @user_ns.doc(body=authenticator_model)
-    @oidc_validate
-    def put(self, username):
-        """Enables or disables OTP for a user"""
-        data = get_request_data(request)
-        if 'enabled' in data.keys():
-            if data['enabled']:
-                keycloak_client.enable_otp_for_user(username)
-                return "OTP Enabled", 200
-            else:
-                keycloak_client.disable_otp_for_user(username)
-                return "OTP Disabled", 200
+    @oidc_validate_user_or_api
+    def post(self, username):
+        """Enables and resets OTP credentials for a user"""
+        keycloak_client.disable_otp_for_user(username)
+        keycloak_client.enable_otp_for_user(username)
+        return "OTP Enabled and Reset", 200
+
+    @oidc_validate_user_or_api
+    def delete(self, username):
+        """Disables and removes OTP credentials for a user"""
+        if keycloak_client.is_credential_enabled_for_user(
+            username,
+            keycloak_client.REQUIRED_ACTION_WEBAUTHN_REGISTER,
+            keycloak_client.CREDENTIAL_TYPE_WEBAUTHN,
+        ):
+            keycloak_client.disable_otp_for_user(username)
+            return "OTP Disabled", 200
         else:
-            return "This path only accepts a JSON object with the field 'enabled': true/false", 400
+            return "WebAuthn must be enabled first", 403
 
 
 @user_ns.route("/<username>/authenticator/webauthn")
 class WebAuthn(Resource):
-    @oidc_validate
+    @oidc_validate_user_or_api
     def get(self, username):
+        """Gets status of WebAuthn credentials for a user"""
         try:
             is_enabled = keycloak_client.is_credential_enabled_for_user(
                 username,
-                keycloak_client.REQUIRED_ACTION_WEBAUTHN_REGISTER, 
-                keycloak_client.CREDENTIAL_TYPE_WEBAUTHN)
-            return json_response({'enabled': is_enabled})
-        except NotADirectoryError:
-            return "User not found", 404
+                keycloak_client.REQUIRED_ACTION_WEBAUTHN_REGISTER,
+                keycloak_client.CREDENTIAL_TYPE_WEBAUTHN,
+            )
+            return json_response({"enabled": is_enabled})
+        except ResourceNotFoundError as e:
+            return str(e), 404
 
-    @user_ns.doc(body=authenticator_model)
-    @oidc_validate
-    def put(self, username):
-        """Enables or disables Webauthn for a user"""
-        data = get_request_data(request)
-        if 'enabled' in data.keys():
-            if data['enabled']:
-                keycloak_client.enable_webauthn_for_user(username)
-                return "WebAuthn Enabled", 200
-            else:
-                keycloak_client.disable_webauthn_for_user(username)
-                return "WebAuthn Disabled", 200
+    @oidc_validate_user_or_api
+    def post(self, username):
+        """Enables and resets WebAuthn credentials for a user"""
+        keycloak_client.disable_webauthn_for_user(username)
+        keycloak_client.enable_webauthn_for_user(username)
+        return "WebAuthn Enabled and Reset", 200
+
+    @oidc_validate_user_or_api
+    def delete(self, username):
+        """Disables and removes WebAuthn credentials for a user"""
+        if keycloak_client.is_credential_enabled_for_user(
+            username,
+            keycloak_client.REQUIRED_ACTION_CONFIGURE_OTP,
+            keycloak_client.CREDENTIAL_TYPE_OTP,
+        ):
+            keycloak_client.disable_webauthn_for_user(username)
+            return "WebAuthn Disabled", 200
         else:
-            return "This path only accepts a JSON object with the field 'enabled': true/false", 400
+            return "OTP must be enabled first", 403
 
 
 if __name__ == "__main__":
