@@ -377,6 +377,17 @@ class UserDetails(Resource):
 
 @user_ns.route("/<username>/authenticator/otp")
 class OTP(Resource):
+    @oidc_validate
+    def get(self, username):
+        try:
+            is_enabled = keycloak_client.is_credential_enabled_for_user(
+                username,
+                keycloak_client.REQUIRED_ACTION_CONFIGURE_OTP, 
+                keycloak_client.CREDENTIAL_TYPE_OTP)
+            return json_response({'enabled': is_enabled})
+        except NotADirectoryError:
+            return "User not found", 404
+
     @user_ns.doc(body=authenticator_model)
     @oidc_validate
     def put(self, username):
@@ -395,6 +406,17 @@ class OTP(Resource):
 
 @user_ns.route("/<username>/authenticator/webauthn")
 class WebAuthn(Resource):
+    @oidc_validate
+    def get(self, username):
+        try:
+            is_enabled = keycloak_client.is_credential_enabled_for_user(
+                username,
+                keycloak_client.REQUIRED_ACTION_WEBAUTHN_REGISTER, 
+                keycloak_client.CREDENTIAL_TYPE_WEBAUTHN)
+            return json_response({'enabled': is_enabled})
+        except NotADirectoryError:
+            return "User not found", 404
+
     @user_ns.doc(body=authenticator_model)
     @oidc_validate
     def put(self, username):

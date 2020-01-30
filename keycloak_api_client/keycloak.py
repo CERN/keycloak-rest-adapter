@@ -934,3 +934,16 @@ class KeycloakAPIClient(object):
         self.delete_user_credential_by_type(username, self.CREDENTIAL_TYPE_WEBAUTHN)
         self.delete_user_required_action_if_exists(username, self.REQUIRED_ACTION_WEBAUTHN_REGISTER)
     
+    def is_credential_enabled_for_user(self, username, required_action_type, credential_type):
+        try:
+            user = self.get_user_by_username(username, self.mfa_realm)
+            required_actions = user['requiredActions']
+            if required_action_type in required_actions:
+                return True
+            user_id, credentials = self.get_user_id_and_credentials(username)
+            for credential in credentials:
+                if credential['type'] == credential_type:
+                    return True
+            return False
+        except:
+            raise NotADirectoryError
