@@ -1,6 +1,8 @@
 import docker
 import time
 
+INTEGRATION_TESTING_IMAGE = "gitlab-registry.cern.ch/authzsvc/docker-images/keycloak"
+INTEGRATION_CONTAINER_NAME = "keycloak-integration"
 
 def tear_down_keycloak_docker():
     """
@@ -23,8 +25,9 @@ def create_keycloak_docker():
     """
     try:
         client = docker.from_env()
+        client.images.pull(INTEGRATION_TESTING_IMAGE)
         containers = client.containers.list(
-            all=True, filters={"name": "keycloak-integration"}
+            all=True, filters={"name": INTEGRATION_CONTAINER_NAME}
         )
 
         if len(containers) > 0:
@@ -38,8 +41,8 @@ def create_keycloak_docker():
         else:
             print("Starting Keycloak container from scratch")
             current_container = client.containers.run(
-                "gitlab-registry.cern.ch/authzsvc/docker-images/keycloak",
-                name="keycloak-integration",
+                INTEGRATION_TESTING_IMAGE,
+                name=INTEGRATION_CONTAINER_NAME,
                 ports={"8080/tcp": 8081},
                 environment={"KEYCLOAK_USER": "admin",
                              "KEYCLOAK_PASSWORD": "admin"},

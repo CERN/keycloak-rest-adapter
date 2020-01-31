@@ -22,7 +22,7 @@ from utils import (
     validate_protocol,
     validate_protocol_data,
     config_dir,
-    auth_protocols,
+    get_supported_protocols,
     ResourceNotFoundError,
 )
 
@@ -270,7 +270,7 @@ class CommonCreator(Resource):
         Common create method for all the endpoints
         """
         protocol = data["protocol"]
-        selected_protocol_id = auth_protocols[protocol]
+        selected_protocol_id = get_supported_protocols()[protocol]
         if selected_protocol_id in data:
             if is_xml(data[selected_protocol_id]):
                 # if data looks like XML use the client description converter to create client

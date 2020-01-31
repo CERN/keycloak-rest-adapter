@@ -3,15 +3,14 @@ import os
 import json
 from xml.etree import ElementTree as ET
 
-
 config_dir = os.path.join(os.getcwd(), "config")
 auth_protocols_file = "{0}/auth_protocols.json".format(config_dir)
 
-auth_protocols = {}
-with open(auth_protocols_file, "r") as f:
-    auth_protocols = json.load(f)
-
-SUPPORTED_PROTOCOLS = list(auth_protocols.keys())
+def get_supported_protocols():
+    auth_protocols = {}
+    with open(auth_protocols_file, "r") as f:
+        auth_protocols = json.load(f)
+    return list(auth_protocols.keys())
 
 
 def json_response(data="", status=200, headers=None):
@@ -48,12 +47,13 @@ def is_xml(data):
 
 def validate_protocol(protocol):
     """
-        Checks if the protocol is contained in the supported methods
-        """
-    if not protocol in SUPPORTED_PROTOCOLS:
+    Checks if the protocol is contained in the supported methods
+    """
+    supported_protocols = get_supported_protocols()
+    if not protocol in supported_protocols:
         return json_response(
             "The protocol is invalid. Accepted protocols: {}".format(
-                str(SUPPORTED_PROTOCOLS)
+                str(supported_protocols)
             ),
             400,
         )
