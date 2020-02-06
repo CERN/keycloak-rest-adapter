@@ -4,13 +4,13 @@ import json
 from xml.etree import ElementTree as ET
 
 config_dir = os.path.join(os.getcwd(), "config")
-auth_protocols_file = "{0}/auth_protocols.json".format(config_dir)
+auth_protocols_file = os.path.join(config_dir, "auth_protocols.json")
 
 def get_supported_protocols():
     auth_protocols = {}
     with open(auth_protocols_file, "r") as f:
         auth_protocols = json.load(f)
-    return list(auth_protocols.keys())
+    return auth_protocols
 
 
 def json_response(data="", status=200, headers=None):
