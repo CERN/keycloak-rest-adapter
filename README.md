@@ -52,12 +52,20 @@ Once we have pip installed, we will use it to fulfill the list of dependencies.
 pip install -r requirements.txt
 ```
 
+
+### Configuration 
+
+Register `keycloak-rest-adapter` in the [Application Portal](https://test-application-portal.web.cern.ch) with client credentials enabled. The application needs two roles: `admin` (with full access) and `user` (with access for enabling and disabling own credentials).
+
+Edit `config/keycloak_client.cfg` with Client ID [`keycloak_rest_adapter_client`] and Client Secret [`keycloak_rest_adapter_client_secret`]. 
+
+
 # Docker run
 
 To build the docker container:
 
 ```bash
-dk build . -t kc-rest
+docker build . -t kc-rest
 ```
 
 To run it exposing the port:
@@ -116,22 +124,3 @@ so it picks up these new changes.
 ### Real time service logs
 
 `journalctl -u keycloak -f`
-
-# Configuration
-
-# Config files
-
-TODO
-
-# Network
-
-By default the application runs on port 5000, if you are using from
-outside you will need to open this port.
-
-```
-~$ systemctl start firewalld
-~$ sudo firewall-cmd --permanent --add-port=5000/tcp
-~$ sudo firewall-cmd --reload
-```
-
-> > > > > > > openshift_deployment
