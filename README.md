@@ -1,11 +1,11 @@
-# Installation process
+# Summary
 
-> **NOTE:** You will need admin rights in order to install the dependencies and
-> the package. Make sure you do before starting with the installation process.
+`keycloak-rest-adapter` is a REST API made in Flask that acts as a bridge between the applications of the CERN Authentication and Authorization Service and [Keycloak's Admin REST API](https://www.keycloak.org/docs-api/9.0/rest-api/index.html). It is documented using Swagger: run the application and check the `/swagger-ui` endpoint in your web browser for API documentation.
 
-## Development process
 
-### Running locally
+# Development
+
+## Running locally
 
 In order to run the server locally, the simplest way is to use the flask debug server:
 
@@ -13,7 +13,7 @@ In order to run the server locally, the simplest way is to use the flask debug s
 FLASK_APP=app.py FLASK_DEBUG=1 flask run
 ```
 
-### Testing
+## Testing
 
 If you want to run all the integration tests, you'll need to have Docker started on your machine.
 
@@ -33,18 +33,11 @@ In order to teardown the Keycloak instance running locally on port 8081, set `TE
 
 After the integration tests run you can checkout your things with user/pass: `admin:admin` on `http://localhost:8081`.
 
-### Clone the repo
+## Install dependencies
 
-Make sure you get the latest available version
+We manage the dependencies using [pip](https://pypi.org/project/pip/). It is very advisable to install the depedencies in an isolated environment using [virtualenv](https://virtualenv.pypa.io/en/stable/) or a similar tool.
 
-`git clone https://gitlab.cern.ch/authzsvc/keycloak-rest-adapter.git`
-
-### Install dependencies
-
-This package had soa few dependencies on other packages. For simplicity's sake,
-in this example we will be using python pip.
-
-`yum install python3-pip -y`
+`yum install python3-pip`
 
 Once we have pip installed, we will use it to fulfill the list of dependencies.
 
@@ -53,7 +46,7 @@ pip install -r requirements.txt
 ```
 
 
-### Configuration 
+## Configuration 
 
 Register `keycloak-rest-adapter` in the [Application Portal](https://test-application-portal.web.cern.ch) with client credentials enabled. The application needs two roles: `admin` (with full access) and `user` (with access for enabling and disabling own credentials).
 
@@ -110,17 +103,17 @@ StandardError=syslog
 WantedBy=multi-user.target
 ```
 
-### Reload systemd daemon
+## Reload systemd daemon
 
 After creating the new systemd unit, we just need to reload the systemd daemon,
 so it picks up these new changes.
 
 `systemctl daemon-reload`
 
-### Starting the service
+## Starting the service
 
 `systemctl start keycloak-rest-adapter.service`
 
-### Real time service logs
+## Real time service logs
 
 `journalctl -u keycloak -f`
