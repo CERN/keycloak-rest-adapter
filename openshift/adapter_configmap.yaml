@@ -14,7 +14,7 @@ objects:
   data:
     client_saml_defaults.json: |-
       {
-        "protocolMappers":[]
+        "protocolMappers":[],
         "consentRequired": false
       }
     client_openid_defaults.json: |-
