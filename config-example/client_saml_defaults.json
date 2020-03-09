@@ -1,3 +1,4 @@
 {
-  "protocolMappers":[]
+  "protocolMappers":[],
+  "consentRequired": false
 }

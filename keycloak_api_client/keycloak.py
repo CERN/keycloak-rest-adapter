@@ -792,9 +792,6 @@ class KeycloakAPIClient(object):
         # by default, create confidential client
         if "publicClient" not in kwargs:
             kwargs["publicClient"] = False
-        # by default don't require consent to login (it's hardcoded to true in keycloak)
-        if "consentRequired" not in kwargs:
-            kwargs["consentRequired"] = False
         if "protocol" not in kwargs or kwargs["protocol"] != "openid-connect":
             # on API level we accept 'openid-connect' & 'openid'. Keycloak only accepts 'openid-connect'
             kwargs["protocol"] = "openid-connect"
@@ -823,7 +820,18 @@ class KeycloakAPIClient(object):
             kwargs["attributes"] = {}
         if "protocol" not in kwargs or kwargs["protocol"] != "saml":
             kwargs["protocol"] = "saml"
-        return self.__create_client(access_token, **kwargs).json()
+        response = self.__create_client(access_token, **kwargs)
+        if response.ok:
+            # Hack in order to set consent_required to false if it's actually specified, not just ignore it
+            # See: https://www.keycloak.org/docs/latest/securing_apps/index.html#client-registration-policies
+            # (Consent Required Policy) section
+            json_response = response.json()
+            update_response = self.update_client_properties(
+                json_response["clientId"], **kwargs
+            )
+            update_response["secret"] = json_response["secret"]
+            return update_response
+        return response.json()
 
     def create_new_client(self, **kwargs):
         """Add new client.

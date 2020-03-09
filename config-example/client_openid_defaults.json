@@ -1,4 +1,5 @@
 {
   "protocolMappers":[],
-  "webOrigins": ["+"]
+  "webOrigins": ["+"],
+  "consentRequired": false
 } 

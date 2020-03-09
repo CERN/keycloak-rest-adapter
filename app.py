@@ -282,33 +282,31 @@ class CommonCreator(Resource):
                     "{0}/client_{1}_defaults.json".format(config_dir, protocol)
                 ) as f:
                     saml_defaults = json.load(f)
-                client_description["protocolMappers"] = saml_defaults["protocolMappers"]
+                client_description.update(saml_defaults)
                 new_client = keycloak_client.create_new_client(**client_description)
             elif protocol == "openid":
                 with open(
                     "{0}/client_{1}_defaults.json".format(config_dir, protocol)
                 ) as f:
                     openid_defaults = json.load(f)
-                if "protocolMappers" not in data:
-                    # if not protocolMappers load default openid protocol mappers
-                    data["protocolMappers"] = openid_defaults["protocolMappers"]
-                    # include audience mapper with clientId
-                    data["protocolMappers"].append(
-                        {
-                            "protocol": "openid-connect",
-                            "config": {
-                                "id.token.claim": "false",
-                                "access.token.claim": "true",
-                                "included.client.audience": data["clientId"],
-                            },
-                            "name": "audience",
-                            "protocolMapper": "oidc-audience-mapper",
-                        }
-                    )
-                if "webOrigins" not in data:
-                    # include default web origins
-                    data["webOrigins"] = openid_defaults["webOrigins"]
-                new_client = keycloak_client.create_new_client(**data)
+                client_params = openid_defaults
+                client_params.update(data)
+                # Include the audience mapper by default
+                if "protocolMappers" not in client_params:
+                    client_params["protocolMappers"] = {}
+                client_params["protocolMappers"].append(
+                    {
+                        "protocol": "openid-connect",
+                        "config": {
+                            "id.token.claim": "false",
+                            "access.token.claim": "true",
+                            "included.client.audience": data["clientId"],
+                        },
+                        "name": "audience",
+                        "protocolMapper": "oidc-audience-mapper",
+                    }
+                )
+                new_client = keycloak_client.create_new_client(**client_params)
             else:
                 return json_response(
                     "Unsupported client protocol '{}'".format(protocol), 400

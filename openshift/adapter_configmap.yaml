@@ -15,11 +15,13 @@ objects:
     client_saml_defaults.json: |-
       {
         "protocolMappers":[]
+        "consentRequired": false
       }
     client_openid_defaults.json: |-
       {
         "protocolMappers":[],
-        "webOrigins": ["+"]
+        "webOrigins": ["+"],
+        "consentRequired": false
       }
     keycloak_client.cfg : |
       [keycloak]
