@@ -1,6 +1,7 @@
 import json
 import os
 from configparser import ConfigParser
+from flask_cors import CORS
 
 from flask import (
     Flask,
@@ -70,6 +71,7 @@ authorizations = {
 }
 
 app = Flask(__name__)
+cors_handler = CORS(app)
 api = Api(
     app,
     version=API_VERSION,

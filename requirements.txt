@@ -8,3 +8,4 @@ flask-restplus-oauth-redirect==0.13.0
 certifi==2019.11.28
 authlib==0.12.*
 werkzeug==0.16.1
+flask_cors==3.0.*
