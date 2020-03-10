@@ -1,15 +1,11 @@
 import requests
 from authlib.jose import jwk, jwt
-from authlib.jose.errors import InvalidClaimError, MissingClaimError
+from authlib.jose.errors import MissingClaimError
 from authlib.oidc.core import ImplicitIDToken, UserInfo
 from flask import current_app, request
 from flask_restplus import Resource
 
 from utils import json_response
-
-AUTHORIZED_APPS = ["authorization-service-api"]
-API_ACCESS_ROLE = "admin"
-USER_ACTIONS_ROLE = "user"
 
 
 class ImplicitIDTokenNoNonce(ImplicitIDToken):
@@ -34,10 +30,6 @@ class ImplicitIDTokenNoNonce(ImplicitIDToken):
         if required and not azp:
             raise MissingClaimError("azp")
 
-        if azp and client_id and azp != client_id:
-            if azp not in AUTHORIZED_APPS:
-                raise InvalidClaimError("azp")
-
 
 def validate_api_access(access_token):
     """
@@ -46,10 +38,10 @@ def validate_api_access(access_token):
     :return: Boolean
     """
     try:
-        if access_token["azp"] in AUTHORIZED_APPS:
+        if access_token["azp"] in current_app.config['AUTH_AUTHORIZED_APPS']:
             return True
         elif (
-            API_ACCESS_ROLE
+            current_app.config['AUTH_API_ACCESS_ROLE']
             in access_token["resource_access"][current_app.config["OIDC_CLIENT_ID"]][
                 "roles"
             ]
@@ -69,7 +61,7 @@ def validate_user_access(access_token, username):
     """
     try:
         if (
-            USER_ACTIONS_ROLE
+            current_app.config['AUTH_USER_ACTIONS_ROLE']
             in access_token["resource_access"][current_app.config["OIDC_CLIENT_ID"]][
                 "roles"
             ]

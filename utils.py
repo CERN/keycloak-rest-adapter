@@ -1,20 +1,16 @@
-from flask import make_response, jsonify
-import os
-import json
+from typing import Dict
 from xml.etree import ElementTree as ET
 
-config_dir = os.path.join(os.getcwd(), "config")
-auth_protocols_file = os.path.join(config_dir, "auth_protocols.json")
+from flask import make_response, jsonify, current_app
 
-def get_supported_protocols():
-    auth_protocols = {}
-    with open(auth_protocols_file, "r") as f:
-        auth_protocols = json.load(f)
-    return auth_protocols
+JSON_MIME_TYPE = "application/json"
+
+
+def get_supported_protocols() -> Dict[str, str]:
+    return current_app.config['AUTH_PROTOCOLS']
 
 
 def json_response(data="", status=200, headers=None):
-    JSON_MIME_TYPE = "application/json"
     headers = headers or {}
     if "Content-Type" not in headers:
         headers["Content-Type"] = JSON_MIME_TYPE
@@ -45,12 +41,13 @@ def is_xml(data):
         return False
 
 
-def validate_protocol(protocol):
+def validate_protocol(protocol, supported_protocols: Dict[str, str]):
     """
     Checks if the protocol is contained in the supported methods
+    :param protocol: the protocol
+    :param supported_protocols: a dict
     """
-    supported_protocols = get_supported_protocols()
-    if not protocol in supported_protocols:
+    if protocol not in supported_protocols:
         return json_response(
             "The protocol is invalid. Accepted protocols: {}".format(
                 str(supported_protocols)
@@ -59,15 +56,15 @@ def validate_protocol(protocol):
         )
 
 
-def validate_protocol_data(data):
+def validate_protocol_data(data, supported_protocols: Dict[str, str]):
     """
     Checks if the protocol in the passed dictionary is correct
     """
-    if not "protocol" in data:
+    if "protocol" not in data:
         return json_response(
             "The request is missing 'protocol'. It must be passed in the form data", 400
         )
-    return validate_protocol(data["protocol"])
+    return validate_protocol(data["protocol"], supported_protocols)
 
 
 class ResourceNotFoundError(Exception):

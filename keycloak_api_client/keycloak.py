@@ -7,7 +7,6 @@ from utils import ResourceNotFoundError
 
 
 class KeycloakAPIClient(object):
-
     # To be investigated:
     # https://stackoverflow.com/questions/46470477/how-to-get-keycloak-users-via-rest-without-admin-account
 
@@ -16,13 +15,13 @@ class KeycloakAPIClient(object):
     """
 
     def __init__(
-        self,
-        server,
-        realm,
-        client_id,
-        client_secret,
-        master_realm="master",
-        mfa_realm="mfa",
+            self,
+            server,
+            realm,
+            client_id,
+            client_secret,
+            master_realm="master",
+            mfa_realm="mfa",
     ):
         """
         Initialize the class with the params needed to use the API.
@@ -113,7 +112,7 @@ class KeycloakAPIClient(object):
         """
         Get HTTP headers with an admin bearer token
         """
-        if self.access_token_object == None:
+        if self.access_token_object is None:
             # get admin access token for the 1st time
             self.access_token_object = self.get_admin_access_token()
 
@@ -416,12 +415,12 @@ class KeycloakAPIClient(object):
         return [policy for policy in matching_policies if policy["name"] == policy_name]
 
     def create_client_policy(
-        self,
-        clientid,
-        policy_name,
-        policy_description="",
-        policy_logic="POSITIVE",
-        policy_strategy="UNANIMOUS",
+            self,
+            clientid,
+            policy_name,
+            policy_description="",
+            policy_logic="POSITIVE",
+            policy_strategy="UNANIMOUS",
     ):
         """
         Create client policy for the given clientid
@@ -522,7 +521,7 @@ class KeycloakAPIClient(object):
         return self.get_auth_permission_by_name(token_exchange_permission_name)[0]
 
     def grant_token_exchange_permissions(
-        self, target_client_object, requestor_client_object
+            self, target_client_object, requestor_client_object
     ):
         """
         Grant token-exchange permission for target client to destination client
@@ -562,7 +561,7 @@ class KeycloakAPIClient(object):
         )
 
     def revoke_token_exchange_permissions(
-        self, target_client_object, requestor_client_object
+            self, target_client_object, requestor_client_object
     ):
         """
         Revoke token-exchange permission for target client to destination client
@@ -614,7 +613,7 @@ class KeycloakAPIClient(object):
         )
 
     def update_token_exchange_permissions(
-        self, client_token_exchange_permission, policies
+            self, client_token_exchange_permission, policies
     ):
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/permission/scope/{3}".format(
@@ -728,7 +727,7 @@ class KeycloakAPIClient(object):
         return json.loads(r.text)
 
     def get_token_exchange_request(
-        self, client_id, client_secret, subject_token, audience
+            self, client_id, client_secret, subject_token, audience
     ):
         """ Return an Authorization Code Exchange token JSON object -> oauth2 Authorization Code Exchange
         https://www.oauth.com/oauth2-servers/pkce/authorization-code-exchange/
@@ -1003,7 +1002,7 @@ class KeycloakAPIClient(object):
         )
 
     def is_credential_enabled_for_user(
-        self, username, required_action_type, credential_type
+            self, username, required_action_type, credential_type
     ):
         """
         Returns True if the required action type or credential type is present for a user, False otherwise

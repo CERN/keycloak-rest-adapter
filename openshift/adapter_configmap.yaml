@@ -4,45 +4,39 @@ metadata:
   name: keycloak-rest-adapter-template-configmap
 
 objects:
-- apiVersion: v1
-  kind: ConfigMap
-  metadata:
-    labels:
-      app: keycloak-rest-adapter-configuration
-    name: keycloak-rest-adapter-configmap
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      labels:
+        app: keycloak-rest-adapter-cfg
+      name: keycloak-rest-adapter-cfg
 
-  data:
-    client_saml_defaults.json: |-
-      {
-        "protocolMappers":[],
-        "consentRequired": false
-      }
-    client_openid_defaults.json: |-
-      {
-        "protocolMappers":[],
-        "webOrigins": ["+"],
-        "consentRequired": false
-      }
-    keycloak_client.cfg : |
-      [keycloak]
-      server = ${KC_ALIAS}
-      realm = ${REALM}
-      keycloak_rest_adapter_client = ${CLIENT_ID}
-      keycloak_rest_adapter_client_secret = ${CLIENT_SECRET}
+    data:
+      overrides.py: |-
+        KEYCLOAK_SERVER = "${KC_ALIAS}"
 
-      [oauth]
-      redirect_url=${ROUTE_HOSTNAME}/oauth2-redirect.html
-      https_swagger=true
 
-      [oidc]
-      jwks_url = ${KC_ALIAS}/auth/realms/cern/protocol/openid-connect/certs
-      issuer =${KC_ALIAS}/auth/realms/cern
+        KEYCLOAK_REALM = "${REALM}"
+        KEYCLOAK_CLIENT_SECRET = "${CLIENT_SECRET}"
+        KEYCLOAK_CLIENT_ID = "${CLIENT_ID}"
 
-    auth_protocols.json: |
-      {
-        "saml": "definition",
-        "openid": "clientId"
-      }
+        OAUTH_AUTH_URL = "${KC_ALIAS}/auth/realms/cern/protocol/openid-connect/auth"
+
+        OIDC_JWKS_URL = "${KC_ALIAS}/auth/realms/cern/protocol/openid-connect/certs"
+        OIDC_ISSUER = "${KC_ALIAS}/auth/realms/cern"
+
+        OAUTH_HTTPS_SWAGGER = True
+        SWAGGER_UI_OAUTH_REDIRECT_URL = "${ROUTE_HOSTNAME}/oauth2-redirect.html"
+
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      labels:
+        app: keycloak-rest-adapter-cfg
+      name: keycloak-rest-adapter-env
+
+    data:
+      KEYCLOAK_REST_ADAPTER_CONFIG: /opt/config/overrides.py
 
 
 parameters:
@@ -60,8 +54,5 @@ parameters:
   - name: CLIENT_SECRET
     description: "Client secret"
     required: True
-  - name: REDIRECT_URIS
-    description: "Redirect URIS separated by commas"
-    value: 'something.cern.ch'
   - name: ROUTE_HOSTNAME
     description: Openshift Route Hostname

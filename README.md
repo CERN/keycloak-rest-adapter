@@ -10,7 +10,7 @@
 In order to run the server locally, the simplest way is to use the flask debug server:
 
 ```bash
-FLASK_APP=app.py FLASK_DEBUG=1 flask run
+FLASK_APP=wsgi.py FLASK_DEBUG=1 flask run
 ```
 
 ## Testing
@@ -50,8 +50,9 @@ pip install -r requirements.txt
 
 Register `keycloak-rest-adapter` in the [Application Portal](https://test-application-portal.web.cern.ch) with client credentials enabled. The application needs two roles: `admin` (with full access) and `user` (with access for enabling and disabling own credentials).
 
-Edit `config/keycloak_client.cfg` with Client ID [`keycloak_rest_adapter_client`] and Client Secret [`keycloak_rest_adapter_client_secret`]. 
-
+Add an environment variable named `KEYCLOAK_REST_ADAPTER_CONFIG` before running your application and then
+point it to a file containing config overrides. The main configuration parameters
+that can be set are available in the `default_adapter_config.py` file.
 
 # Docker run
 
