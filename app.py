@@ -1,4 +1,5 @@
 import os
+from typing import Tuple
 
 from flask import (
     Flask,
@@ -28,23 +29,10 @@ def read_env_config(app: Flask):
     pass
 
 
-def create_app() -> Flask:
-    app = Flask(__name__)
-    CORS(app)
-    app.url_map.strict_slashes = False
-    app.config.from_object("default_adapter_config")
-    app.logger = configure_logging()
-    read_env_config(app)
-
-    app.config['KEYCLOAK_CLIENT'] = KeycloakAPIClient(app.config['KEYCLOAK_SERVER'], app.config['KEYCLOAK_REALM'],
-                                                      app.config['KEYCLOAK_CLIENT_ID'],
-                                                      app.config['KEYCLOAK_CLIENT_SECRET'])
-
-    if app.config.get('OAUTH_AUTH_URL', None):
-        app.config['OAUTH_AUTHORIZATIONS']['oauth2'][
-            'authorizationUrl'] = app.config['OAUTH_AUTH_URL']
-
-    return app
+def configure_keycloak_client(app: Flask) -> KeycloakAPIClient:
+    return KeycloakAPIClient(app.config['KEYCLOAK_SERVER'], app.config['KEYCLOAK_REALM'],
+                             app.config['KEYCLOAK_CLIENT_ID'],
+                             app.config['KEYCLOAK_CLIENT_SECRET'])
 
 
 def create_api(app: Flask) -> Api:
@@ -61,8 +49,26 @@ def create_api(app: Flask) -> Api:
     return api_builder
 
 
-application = create_app()
-api = create_api(application)
+def create_app() -> Tuple[Flask, Api]:
+    app = Flask(__name__)
+    CORS(app)
+    app.url_map.strict_slashes = False
+    app.config.from_object("default_adapter_config")
+    app.logger = configure_logging()
+    read_env_config(app)
+
+    app.config['KEYCLOAK_CLIENT'] = configure_keycloak_client(app)
+
+    if app.config.get('OAUTH_AUTH_URL', None):
+        app.config['OAUTH_AUTHORIZATIONS']['oauth2'][
+            'authorizationUrl'] = app.config['OAUTH_AUTH_URL']
+
+    api_builder = create_api(app)
+
+    return app, api_builder
+
+
+application, api = create_app()
 
 
 @application.route("/")

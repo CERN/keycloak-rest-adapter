@@ -1,9 +1,12 @@
+from copy import deepcopy
+
 from flask import (
     jsonify,
     request,
-)
+    current_app)
 from flask_restplus import Resource, fields
 
+from app import application
 from app import api
 from auth import oidc_validate_api, oidc_validate_user_or_api
 from keycloak_api_client.keycloak import KeycloakAPIClient
@@ -16,7 +19,7 @@ from utils import (
     ResourceNotFoundError,
 )
 
-keycloak_client: KeycloakAPIClient = api.app.config['KEYCLOAK_CLIENT']
+keycloak_client: KeycloakAPIClient = application.config['KEYCLOAK_CLIENT']
 ns = api.namespace("client", description="Client operations")
 user_ns = api.namespace("user", description="Methods for handling user operations")
 
@@ -44,8 +47,8 @@ class TokenExchangePermissions(Resource):
     def put(self, target_client_id, requestor_client_id):
         """Grants token exchange permissions"""
 
-        target_client = keycloak_client.get_client_by_clientID(target_client_id)
-        requestor_client = keycloak_client.get_client_by_clientID(requestor_client_id)
+        target_client = keycloak_client.get_client_by_client_id(target_client_id)
+        requestor_client = keycloak_client.get_client_by_client_id(requestor_client_id)
 
         verify_error = self.__verify_clients(
             target_client, requestor_client, target_client_id, requestor_client_id
@@ -64,8 +67,8 @@ class TokenExchangePermissions(Resource):
     @oidc_validate_api
     def delete(self, target_client_id, requestor_client_id):
         """Revokes token exchange permissions"""
-        target_client = keycloak_client.get_client_by_clientID(target_client_id)
-        requestor_client = keycloak_client.get_client_by_clientID(requestor_client_id)
+        target_client = keycloak_client.get_client_by_client_id(target_client_id)
+        requestor_client = keycloak_client.get_client_by_client_id(requestor_client_id)
 
         verify_error = self.__verify_clients(
             target_client, requestor_client, target_client_id, requestor_client_id
@@ -128,8 +131,8 @@ class ClientDetails(Resource):
         validation = validate_protocol(protocol, self.auth_protocols)
         if validation:
             return validation
-        ret = keycloak_client.delete_client_by_clientID(client_id)
-        if ret is not None:
+        deletion_response = keycloak_client.delete_client_by_client_id(client_id)
+        if deletion_response is not None:
             return json_response(
                 "Client '{0}' deleted successfully".format(client_id), 200
             )
@@ -167,15 +170,30 @@ class ManageClientSecret(Resource):
 class CommonCreator(Resource):
     def __init__(self, *args, **kwargs):
         super(CommonCreator, self).__init__(*args, **kwargs)
-        self.protocol_mappers = api.app.config['CLIENT_DEFAULTS']
-        self.auth_protocols = api.app.config['AUTH_PROTOCOLS']
+        self.protocol_mappers = current_app.config['CLIENT_DEFAULTS']
+        self.auth_protocols = current_app.config['AUTH_PROTOCOLS']
+
+    def _create_oidc_protocol_mapper(self, data):
+        """
+        Creates the protocol mapper for OIDC
+        """
+        return {
+            "protocol": "openid-connect",
+            "config": {
+                "id.token.claim": "false",
+                "access.token.claim": "true",
+                "included.client.audience": data["clientId"],
+            },
+            "name": "audience",
+            "protocolMapper": "oidc-audience-mapper",
+        }
 
     def common_create(self, data):
         """
         Common create method for all the endpoints
         """
         protocol = data["protocol"]
-        selected_protocol_id = self.auth_protocols[protocol]
+        selected_protocol_id = deepcopy(self.auth_protocols[protocol])
         if selected_protocol_id in data:
             if is_xml(data[selected_protocol_id]):
                 # if data looks like XML use the client description converter to create client
@@ -183,28 +201,16 @@ class CommonCreator(Resource):
                     data[selected_protocol_id]
                 )
                 # load saml protocol mappers
-                saml_defaults = self.protocol_mappers[protocol]
+                saml_defaults = deepcopy(self.protocol_mappers[protocol])
                 client_description.update(saml_defaults)
                 new_client = keycloak_client.create_new_client(**client_description)
             elif protocol == "openid":
-                openid_defaults = self.protocol_mappers[protocol]
-                client_params = openid_defaults
+                client_params = deepcopy(self.protocol_mappers[protocol])
                 client_params.update(data)
                 # Include the audience mapper by default
                 if "protocolMappers" not in client_params:
                     client_params["protocolMappers"] = {}
-                client_params["protocolMappers"].append(
-                    {
-                        "protocol": "openid-connect",
-                        "config": {
-                            "id.token.claim": "false",
-                            "access.token.claim": "true",
-                            "included.client.audience": data["clientId"],
-                        },
-                        "name": "audience",
-                        "protocolMapper": "oidc-audience-mapper",
-                    }
-                )
+                client_params["protocolMappers"].append(self._create_oidc_protocol_mapper(data))
                 new_client = keycloak_client.create_new_client(**client_params)
             else:
                 return json_response(

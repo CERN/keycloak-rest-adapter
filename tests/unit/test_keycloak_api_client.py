@@ -54,14 +54,14 @@ class TestKeycloakApiClient(unittest.TestCase):
         )
 
     def test_create_oidc_client(self):
-        self.client.delete_client_by_clientID(OIDC_CLIENT_ID)
+        self.client.delete_client_by_client_id(OIDC_CLIENT_ID)
         created = self.client.create_new_openid_client(
             **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
         )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
     def test_create_saml_client_with_xml_converter(self):
-        self.client.delete_client_by_clientID(SAML_ENTITY_ID)
+        self.client.delete_client_by_client_id(SAML_ENTITY_ID)
         client_description = self.client.client_description_converter(SAML_DESCRIPTOR)
         self.assertIsNotNone(client_description)
         self.assertEqual("saml", client_description["protocol"])
@@ -74,7 +74,7 @@ class TestKeycloakApiClient(unittest.TestCase):
         )
 
     def test_refresh_token_oidc_client(self):
-        self.client.delete_client_by_clientID(OIDC_CLIENT_ID)
+        self.client.delete_client_by_client_id(OIDC_CLIENT_ID)
         created = self.client.create_new_openid_client(
             **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
         )
@@ -87,12 +87,12 @@ class TestKeycloakApiClient(unittest.TestCase):
         self.assertEqual("secret", recreated_token["type"])
 
     def test_delete_not_found(self):
-        delete_response = self.client.delete_client_by_clientID("some_missing_client")
+        delete_response = self.client.delete_client_by_client_id("some_missing_client")
 
         self.assertIsNone(delete_response)
 
     def test_recreate_secret_oidc_client(self):
-        self.client.delete_client_by_clientID(OIDC_CLIENT_ID)
+        self.client.delete_client_by_client_id(OIDC_CLIENT_ID)
         created = self.client.create_new_openid_client(
             **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
         )
@@ -105,7 +105,7 @@ class TestKeycloakApiClient(unittest.TestCase):
         self.assertEqual("secret", recreated_token["type"])
 
     def test_update_oidc_client_updates_properties(self):
-        self.client.delete_client_by_clientID(OIDC_CLIENT_ID)
+        self.client.delete_client_by_client_id(OIDC_CLIENT_ID)
         created = self.client.create_new_openid_client(
             **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
         )
