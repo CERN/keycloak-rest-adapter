@@ -1,6 +1,7 @@
 import os
 from typing import Tuple
 
+from authlib_helpers.decorators import AuthLibHelper
 from flask import (
     Flask,
     redirect,
@@ -9,6 +10,7 @@ from flask import (
 from flask_cors import CORS
 from flask_restplus import Api, apidoc
 
+from auth import UserAuthLibHelper
 from keycloak_api_client.keycloak import KeycloakAPIClient
 from log_utils import configure_logging
 
@@ -35,6 +37,18 @@ def configure_keycloak_client(app: Flask) -> KeycloakAPIClient:
                              app.config['KEYCLOAK_CLIENT_SECRET'])
 
 
+def configure_authlib_helper(app: Flask) -> AuthLibHelper:
+    return UserAuthLibHelper(
+        access_role=app.config['AUTH_API_ACCESS_ROLE'],
+        user_access_role=app.config['AUTH_USER_ACTIONS_ROLE'],
+        client_id=app.config['OIDC_CLIENT_ID'],
+        authorized_apps=app.config['AUTH_AUTHORIZED_APPS'],
+        oidc_jwks_url=app.config['OIDC_JWKS_URL'],
+        oidc_issuer=app.config['OIDC_ISSUER'],
+        logger=app.logger
+    )
+
+
 def create_api(app: Flask) -> Api:
     api_builder = Api(
         app,
@@ -58,6 +72,7 @@ def create_app() -> Tuple[Flask, Api]:
     read_env_config(app)
 
     app.config['KEYCLOAK_CLIENT'] = configure_keycloak_client(app)
+    app.config['AUTH_LIB_HELPER'] = configure_authlib_helper(app)
 
     if app.config.get('OAUTH_AUTH_URL', None):
         app.config['OAUTH_AUTHORIZATIONS']['oauth2'][

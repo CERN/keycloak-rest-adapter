@@ -48,6 +48,7 @@ test:
   stage: test
   image: "python:3.7-slim"
   before_script:
+    - export PIP_CONFIG_FILE=$(pwd)/pip.conf
     - pip install -r requirements.txt
     - pip install -r test-requirements.txt
   script:
