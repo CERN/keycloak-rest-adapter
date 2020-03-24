@@ -7,6 +7,8 @@ KEYCLOAK_SERVER = "https://keycloak-dev.cern.ch"
 KEYCLOAK_REALM = "master"
 KEYCLOAK_CLIENT_ID = "keycloak-rest-adapter"
 # Override this in the config
+# Note that this must be the client secret of the "keycloak-rest-adapter" client in
+# the "master" realm, not in the "cern" realm.
 KEYCLOAK_CLIENT_SECRET = None
 
 # OAuth config (for the Swagger UI)

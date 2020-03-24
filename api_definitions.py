@@ -293,41 +293,83 @@ class UserDetails(Resource):
                 400,
             )
 
+#
+# Routes for MFA settings
+#
+# Routes are /<username>/authenticator/[method], where [method] = otp or webauthn
+# GET    /<username>/authenticator/[method]       : determine if method is enabled for user
+# POST   /<username>/authenticator/[method]       : enabled method for user
+# DELETE /<username>/authenticator/[method]       : disable method for user
+# POST   /<username>/authenticator/[method]/reset : resets method credentials for user (disables and enables method)
+
+def is_otp_enabled(keycloak_client, username):
+    return keycloak_client.is_credential_enabled_for_user(
+        username,
+        keycloak_client.REQUIRED_ACTION_CONFIGURE_OTP,
+        keycloak_client.CREDENTIAL_TYPE_OTP)
+
+def is_webauthn_enabled(keycloak_client, username):
+    return keycloak_client.is_credential_enabled_for_user(
+        username,
+        keycloak_client.REQUIRED_ACTION_WEBAUTHN_REGISTER,
+        keycloak_client.CREDENTIAL_TYPE_WEBAUTHN)
+
 
 @user_ns.route("/<username>/authenticator/otp")
 class OTP(Resource):
+
     @auth_lib_helper.oidc_validate_user_or_api
     def get(self, username):
         """Gets status of OTP credentials for a user"""
         try:
-            is_enabled = keycloak_client.is_credential_enabled_for_user(
-                username,
-                keycloak_client.REQUIRED_ACTION_CONFIGURE_OTP,
-                keycloak_client.CREDENTIAL_TYPE_OTP,
-            )
+            is_enabled = is_otp_enabled(keycloak_client, username)
             return json_response({"enabled": is_enabled})
         except ResourceNotFoundError as e:
             return str(e), 404
 
     @auth_lib_helper.oidc_validate_user_or_api
     def post(self, username):
-        """Enables and resets OTP credentials for a user"""
-        keycloak_client.disable_otp_for_user(username)
-        keycloak_client.enable_otp_for_user(username)
-        return "OTP Enabled and Reset", 200
+        """Enables OTP credentials for a user"""
+        try:
+            is_enabled = is_otp_enabled(keycloak_client, username)
+        except ResourceNotFoundError as e:
+            return str(e), 404
+
+        if not is_enabled:
+            keycloak_client.enable_otp_for_user(username)
+            return "OTP Enabled", 200
+        else:
+            return "OTP already enabled", 403
 
     @auth_lib_helper.oidc_validate_user_or_api
     def delete(self, username):
         """Disables and removes OTP credentials for a user"""
-        if keycloak_client.is_credential_enabled_for_user(
-                username,
-                keycloak_client.REQUIRED_ACTION_WEBAUTHN_REGISTER,
-                keycloak_client.CREDENTIAL_TYPE_WEBAUTHN,
-        ):
+        try:
+            otp_enabled = is_otp_enabled(keycloak_client, username)
+            webauthn_enabled = is_webauthn_enabled(keycloak_client, username)
+        except ResourceNotFoundError as e:
+            return str(e), 404
+        if not otp_enabled:
+            return "OTP must be enabled first", 403
+        if not webauthn_enabled:
+            return "Cannot disable OTP if WebAuthn is not enabled. At least one MFA method must always be enabled for the user.", 403
+        keycloak_client.disable_otp_for_user(username)
+
+@user_ns.route("/<username>/authenticator/otp/reset")
+class OTPReset(Resource):
+
+    @auth_lib_helper.oidc_validate_user_or_api
+    def post(self, username):
+        """Enables and resets OTP credentials for a user"""
+        try:
+            is_enabled = is_otp_enabled(keycloak_client, username)
+        except ResourceNotFoundError as e:
+            return str(e), 404
+        if is_enabled:
             keycloak_client.disable_otp_for_user(username)
-            return "OTP Disabled", 200
-        else:
-            return "WebAuthn must be enabled first", 403
+        keycloak_client.enable_otp_for_user(username)
+        return "OTP Enabled and Reset", 200
+
 
 
 @user_ns.route("/<username>/authenticator/webauthn")
@@ -336,31 +378,51 @@ class WebAuthn(Resource):
     def get(self, username):
         """Gets status of WebAuthn credentials for a user"""
         try:
-            is_enabled = keycloak_client.is_credential_enabled_for_user(
-                username,
-                keycloak_client.REQUIRED_ACTION_WEBAUTHN_REGISTER,
-                keycloak_client.CREDENTIAL_TYPE_WEBAUTHN,
-            )
+            is_enabled = is_webauthn_enabled(keycloak_client, username)
             return json_response({"enabled": is_enabled})
         except ResourceNotFoundError as e:
             return str(e), 404
 
     @auth_lib_helper.oidc_validate_user_or_api
     def post(self, username):
-        """Enables and resets WebAuthn credentials for a user"""
-        keycloak_client.disable_webauthn_for_user(username)
-        keycloak_client.enable_webauthn_for_user(username)
-        return "WebAuthn Enabled and Reset", 200
+        """Enables WebAuthn credentials for a user"""
+        try:
+            is_enabled = is_webauthn_enabled(keycloak_client, username)
+        except ResourceNotFoundError as e:
+            return str(e), 404
+        if not is_enabled:
+            keycloak_client.enable_webauthn_for_user(username)
+            return "WebAuthn Enabled", 200
+        else:
+            return "WebAuthn already enabled", 403
 
     @auth_lib_helper.oidc_validate_user_or_api
     def delete(self, username):
         """Disables and removes WebAuthn credentials for a user"""
-        if keycloak_client.is_credential_enabled_for_user(
-                username,
-                keycloak_client.REQUIRED_ACTION_CONFIGURE_OTP,
-                keycloak_client.CREDENTIAL_TYPE_OTP,
-        ):
+        try:
+            otp_enabled = is_otp_enabled(keycloak_client, username)
+            webauthn_enabled = is_webauthn_enabled(keycloak_client, username)
+        except ResourceNotFoundError as e:
+            return str(e), 404
+        if not webauthn_enabled:
+            return "WebAuthn must be enabled first", 403
+        if not otp_enabled:
+            return "Cannot disable WebAuthn if OTP is not enabled. At least one MFA method must always be enabled for the user.", 403
+        keycloak_client.disable_webauthn_for_user(username)
+        return "WebAuthn Disabled", 200
+
+
+@user_ns.route("/<username>/authenticator/webauthn/reset")
+class WebAuthnReset(Resource):
+
+    @auth_lib_helper.oidc_validate_user_or_api
+    def post(self, username):
+        """Enables and resets WebAuthn credentials for a user"""
+        try:
+            is_enabled = is_webauthn_enabled(keycloak_client, username)
+        except ResourceNotFoundError as e:
+            return str(e), 404
+        if is_enabled:
             keycloak_client.disable_webauthn_for_user(username)
-            return "WebAuthn Disabled", 200
-        else:
-            return "OTP must be enabled first", 403
+        keycloak_client.enable_webauthn_for_user(username)
+        return "WebAuthn Enabled and Reset", 200

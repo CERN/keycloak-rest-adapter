@@ -7,11 +7,26 @@
 
 ## Running locally
 
-In order to run the server locally, the simplest way is to use the flask debug server:
+In order to run the server locally, the simplest way is to use the flask debug server.
 
-```bash
-FLASK_APP=wsgi.py FLASK_DEBUG=1 flask run
+Copy the file `default_adapter_config.py` to `test_adapter_config.py` (`test_adapter_config*.py` files are gitignored)
+and override the settings you need to override, most likely `KEYCLOAK_CLIENT_SECRET` and `OAUTH_HTTPS_SWAGGER`:
+
 ```
+# Note that this must be the client secret of the "keycloak-rest-adapter" client in
+# the "master" realm, not in the "cern" realm.
+KEYCLOAK_CLIENT_SECRET = "blah-blah-guid"
+OAUTH_HTTPS_SWAGGER = False
+```
+
+The `.flaskenv` file will set `KEYCLOAK_REST_ADAPTER_CONFIG=test_adapter_config.py` so that your
+configuration overrides are loaded, then you can run
+
+```
+flask run
+```
+
+and access the swagger api on your local machine.
 
 ## Testing
 
@@ -42,17 +57,19 @@ We manage the dependencies using [pip](https://pypi.org/project/pip/). It is ver
 Once we have pip installed, we will use it to fulfill the list of dependencies.
 
 ```
-pip install -r requirements.txt
+PIP_CONFIG_FILE=pip.conf pip install -r requirements.txt
 ```
 
+On Windows (PowerShell):
+
+```
+$env:PIP_CONFIG_FILE="$pwd\pip.conf"
+pip install -r requirements.txt
+```
 
 ## Configuration 
 
 Register `keycloak-rest-adapter` in the [Application Portal](https://test-application-portal.web.cern.ch) with client credentials enabled. The application needs two roles: `admin` (with full access) and `user` (with access for enabling and disabling own credentials).
-
-Add an environment variable named `KEYCLOAK_REST_ADAPTER_CONFIG` before running your application and then
-point it to a file containing config overrides. The main configuration parameters
-that can be set are available in the `default_adapter_config.py` file.
 
 # Docker run
 

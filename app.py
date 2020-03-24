@@ -14,15 +14,6 @@ from auth import UserAuthLibHelper
 from keycloak_api_client.keycloak import KeycloakAPIClient
 from log_utils import configure_logging
 
-# Required to have access to keycloak. ca-bundle is on centos
-if os.environ.get("REQUESTS_CA_BUNDLE") is None:
-    certs_base = "/etc/ssl/certs/"
-    ca_certs = os.path.join(certs_base, "ca-certificates.crt")
-    if not os.path.exists(ca_certs):
-        ca_certs = os.path.join(certs_base, "ca-bundle.crt")
-    os.environ["REQUESTS_CA_BUNDLE"] = ca_certs
-
-
 def read_env_config(app: Flask):
     try:
         app.config.from_envvar("KEYCLOAK_REST_ADAPTER_CONFIG")
