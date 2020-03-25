@@ -32,6 +32,7 @@ def configure_authlib_helper(app: Flask) -> AuthLibHelper:
     return UserAuthLibHelper(
         access_role=app.config['AUTH_API_ACCESS_ROLE'],
         user_access_role=app.config['AUTH_USER_ACTIONS_ROLE'],
+        multifactor_role=app.config['AUTH_USER_ACTIONS_MFA_ROLE'],
         client_id=app.config['OIDC_CLIENT_ID'],
         authorized_apps=app.config['AUTH_AUTHORIZED_APPS'],
         oidc_jwks_url=app.config['OIDC_JWKS_URL'],

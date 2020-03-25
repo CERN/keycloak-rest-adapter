@@ -327,7 +327,7 @@ class OTP(Resource):
         except ResourceNotFoundError as e:
             return str(e), 404
 
-    @auth_lib_helper.oidc_validate_user_or_api
+    @auth_lib_helper.oidc_validate_multifactor_user_or_api
     def post(self, username):
         """Enables OTP credentials for a user"""
         try:
@@ -341,7 +341,7 @@ class OTP(Resource):
         else:
             return "OTP already enabled", 403
 
-    @auth_lib_helper.oidc_validate_user_or_api
+    @auth_lib_helper.oidc_validate_multifactor_user_or_api
     def delete(self, username):
         """Disables and removes OTP credentials for a user"""
         try:
@@ -354,11 +354,12 @@ class OTP(Resource):
         if not webauthn_enabled:
             return "Cannot disable OTP if WebAuthn is not enabled. At least one MFA method must always be enabled for the user.", 403
         keycloak_client.disable_otp_for_user(username)
+        return "OTP Disabled", 200
 
 @user_ns.route("/<username>/authenticator/otp/reset")
 class OTPReset(Resource):
 
-    @auth_lib_helper.oidc_validate_user_or_api
+    @auth_lib_helper.oidc_validate_multifactor_user_or_api
     def post(self, username):
         """Enables and resets OTP credentials for a user"""
         try:
@@ -383,7 +384,7 @@ class WebAuthn(Resource):
         except ResourceNotFoundError as e:
             return str(e), 404
 
-    @auth_lib_helper.oidc_validate_user_or_api
+    @auth_lib_helper.oidc_validate_multifactor_user_or_api
     def post(self, username):
         """Enables WebAuthn credentials for a user"""
         try:
@@ -396,7 +397,7 @@ class WebAuthn(Resource):
         else:
             return "WebAuthn already enabled", 403
 
-    @auth_lib_helper.oidc_validate_user_or_api
+    @auth_lib_helper.oidc_validate_multifactor_user_or_api
     def delete(self, username):
         """Disables and removes WebAuthn credentials for a user"""
         try:
@@ -415,7 +416,7 @@ class WebAuthn(Resource):
 @user_ns.route("/<username>/authenticator/webauthn/reset")
 class WebAuthnReset(Resource):
 
-    @auth_lib_helper.oidc_validate_user_or_api
+    @auth_lib_helper.oidc_validate_multifactor_user_or_api
     def post(self, username):
         """Enables and resets WebAuthn credentials for a user"""
         try:
