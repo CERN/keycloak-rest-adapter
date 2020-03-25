@@ -314,6 +314,29 @@ def is_webauthn_enabled(keycloak_client, username):
         keycloak_client.REQUIRED_ACTION_WEBAUTHN_REGISTER,
         keycloak_client.CREDENTIAL_TYPE_WEBAUTHN)
 
+@user_ns.route("/<username>/authenticator")
+class MfaSettings(Resource):
+
+    @auth_lib_helper.oidc_validate_user_or_api
+    def get(self, username):
+        """
+        Gets all the MFA settings for the user
+        """
+        try:
+            otp_enabled, otp_must_initialize, webauthn_enabled, webauthn_must_initialize = keycloak_client.get_user_mfa_settings(username)
+            return json_response({
+                "otp": { 
+                    "enabled" : otp_enabled,
+                    "initialization_required" : otp_must_initialize
+                },
+                "webauthn": { 
+                    "enabled" : webauthn_enabled,
+                    "initialization_required" : webauthn_must_initialize
+                }
+            })
+        except ResourceNotFoundError as e:
+            return str(e), 404
+
 
 @user_ns.route("/<username>/authenticator/otp")
 class OTP(Resource):

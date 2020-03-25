@@ -890,6 +890,8 @@ class KeycloakAPIClient:
             )
             return
 
+    # TBM: methods that call this usually have a `realm` parameter, but here the
+    # realm is hardcoded.
     def get_user_id_and_credentials(self, username):
         """
         Gets user ID and credentials
@@ -904,6 +906,21 @@ class KeycloakAPIClient:
         self.logger.info("Getting credentials for user '{0}'".format(username))
         credentials = json.loads(ret.text)
         return user["id"], credentials
+
+    def get_user_and_mfa_credentials(self, username):
+        """
+        Gets user and credentials
+        username: user's username in Keycloak
+        """
+        headers = self.__get_admin_access_token_headers()
+        user = self.get_user_by_username(username, self.mfa_realm)
+        url = "{0}/admin/realms/{1}/users/{2}/credentials".format(
+            self.base_url, self.mfa_realm, user["id"]
+        )
+        ret = self.send_request("get", url, headers=headers)
+        self.logger.info("Getting credentials for user '{0}'".format(username))
+        credentials = json.loads(ret.text)
+        return user, credentials
 
     def delete_user_credential_by_id(self, user_id, credential_id):
         """
@@ -995,9 +1012,7 @@ class KeycloakAPIClient:
             username, self.REQUIRED_ACTION_WEBAUTHN_REGISTER
         )
 
-    def is_credential_enabled_for_user(
-            self, username, required_action_type, credential_type
-    ):
+    def is_credential_enabled_for_user(self, username, required_action_type, credential_type):
         """
         Returns True if the required action type or credential type is present for a user, False otherwise
         username: users's username in Keycloak
@@ -1009,8 +1024,23 @@ class KeycloakAPIClient:
         required_actions = user["requiredActions"]
         if required_action_type in required_actions:
             return True
-        user_id, credentials = self.get_user_id_and_credentials(username)
+        _, credentials = self.get_user_id_and_credentials(username)
         for credential in credentials:
             if credential["type"] == credential_type:
                 return True
         return False
+
+    def _has_credential(self, credentials, credential_type):
+        for credential in credentials:
+            if credential["type"] == credential_type:
+                return True
+        return False
+
+    def get_user_mfa_settings(self, username):
+        user, credentials = self.get_user_and_mfa_credentials(username)
+        otp_must_initialize = (self.REQUIRED_ACTION_CONFIGURE_OTP in user["requiredActions"])
+        otp_enabled = otp_must_initialize or self._has_credential(credentials, self.CREDENTIAL_TYPE_OTP)
+        webauthn_must_initialize = (self.REQUIRED_ACTION_WEBAUTHN_REGISTER in user["requiredActions"])
+        webauthn_enabled = webauthn_must_initialize or self._has_credential(credentials, self.CREDENTIAL_TYPE_WEBAUTHN)
+        return otp_enabled, otp_must_initialize, webauthn_enabled, webauthn_must_initialize
+    
