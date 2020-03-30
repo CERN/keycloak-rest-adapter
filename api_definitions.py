@@ -362,7 +362,7 @@ class OTP(Resource):
             keycloak_client.enable_otp_for_user(username)
             return "OTP Enabled", 200
         else:
-            return "OTP already enabled", 403
+            return "OTP already enabled", 200
 
     @auth_lib_helper.oidc_validate_multifactor_user_or_api
     def delete(self, username):
@@ -373,7 +373,7 @@ class OTP(Resource):
         except ResourceNotFoundError as e:
             return str(e), 404
         if not otp_enabled:
-            return "OTP must be enabled first", 403
+            return "OTP already disabled", 200
         if not webauthn_enabled:
             return "Cannot disable OTP if WebAuthn is not enabled. At least one MFA method must always be enabled for the user.", 403
         keycloak_client.disable_otp_for_user(username)
@@ -418,7 +418,7 @@ class WebAuthn(Resource):
             keycloak_client.enable_webauthn_for_user(username)
             return "WebAuthn Enabled", 200
         else:
-            return "WebAuthn already enabled", 403
+            return "WebAuthn already enabled", 200
 
     @auth_lib_helper.oidc_validate_multifactor_user_or_api
     def delete(self, username):
@@ -429,7 +429,7 @@ class WebAuthn(Resource):
         except ResourceNotFoundError as e:
             return str(e), 404
         if not webauthn_enabled:
-            return "WebAuthn must be enabled first", 403
+            return "WebAuthn already disabled", 200
         if not otp_enabled:
             return "Cannot disable WebAuthn if OTP is not enabled. At least one MFA method must always be enabled for the user.", 403
         keycloak_client.disable_webauthn_for_user(username)
