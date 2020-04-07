@@ -1,5 +1,5 @@
 Flask==1.1.1
-gunicorn==19.4.*
+gunicorn==19.5.*
 requests==2.22.*
 # We had to fork the repo in order to allow the redirect url to work
 flask-restplus-oauth-redirect==0.13.0
