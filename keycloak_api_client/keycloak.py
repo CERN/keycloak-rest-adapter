@@ -17,13 +17,13 @@ class KeycloakAPIClient:
     """
 
     def __init__(
-            self,
-            server,
-            realm,
-            client_id,
-            client_secret,
-            master_realm="master",
-            mfa_realm="mfa",
+        self,
+        server,
+        realm,
+        client_id,
+        client_secret,
+        master_realm="master",
+        mfa_realm="mfa",
     ):
         """
         Initialize the class with the params needed to use the API.
@@ -412,12 +412,12 @@ class KeycloakAPIClient:
         return [policy for policy in matching_policies if policy["name"] == policy_name]
 
     def create_client_policy(
-            self,
-            clientid,
-            policy_name,
-            policy_description="",
-            policy_logic="POSITIVE",
-            policy_strategy="UNANIMOUS",
+        self,
+        clientid,
+        policy_name,
+        policy_description="",
+        policy_logic="POSITIVE",
+        policy_strategy="UNANIMOUS",
     ):
         """
         Create client policy for the given clientid
@@ -518,7 +518,7 @@ class KeycloakAPIClient:
         return self.get_auth_permission_by_name(token_exchange_permission_name)[0]
 
     def grant_token_exchange_permissions(
-            self, target_client_object, requestor_client_object
+        self, target_client_object, requestor_client_object
     ):
         """
         Grant token-exchange permission for target client to destination client
@@ -558,7 +558,7 @@ class KeycloakAPIClient:
         )
 
     def revoke_token_exchange_permissions(
-            self, target_client_object, requestor_client_object
+        self, target_client_object, requestor_client_object
     ):
         """
         Revoke token-exchange permission for target client to destination client
@@ -610,7 +610,7 @@ class KeycloakAPIClient:
         )
 
     def update_token_exchange_permissions(
-            self, client_token_exchange_permission, policies
+        self, client_token_exchange_permission, policies
     ):
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/permission/scope/{3}".format(
@@ -724,7 +724,7 @@ class KeycloakAPIClient:
         return json.loads(r.text)
 
     def get_token_exchange_request(
-            self, client_id, client_secret, subject_token, audience
+        self, client_id, client_secret, subject_token, audience
     ):
         """ Return an Authorization Code Exchange token JSON object -> oauth2 Authorization Code Exchange
         https://www.oauth.com/oauth2-servers/pkce/authorization-code-exchange/
@@ -756,9 +756,7 @@ class KeycloakAPIClient:
             "Content-Type": "application/json",
             "Authorization": "Bearer {0}".format(access_token),
         }
-        url = "{0}/admin/realms/{1}/clients".format(
-            self.base_url, self.realm
-        )
+        url = "{0}/admin/realms/{1}/clients".format(self.base_url, self.realm)
         self.logger.info(
             "Creating client '{0}' --> {1}".format(kwargs["clientId"], kwargs)
         )
@@ -799,8 +797,12 @@ class KeycloakAPIClient:
             update_response = self.update_client_properties(
                 kwargs["clientId"], **kwargs
             )
-            client_secret_json = self.display_client_secret(update_response["clientId"]).json()
-            update_response["secret"] = client_secret_json["value"] if "value" in client_secret_json else None
+            client_secret_json = self.display_client_secret(
+                update_response["clientId"]
+            ).json()
+            update_response["secret"] = (
+                client_secret_json["value"] if "value" in client_secret_json else None
+            )
             return update_response
         return response.json()
 
@@ -821,9 +823,7 @@ class KeycloakAPIClient:
             # Hack in order to set consent_required to false if it's actually specified, not just ignore it
             # See: https://www.keycloak.org/docs/latest/securing_apps/index.html#client-registration-policies
             # (Consent Required Policy) section
-            return self.update_client_properties(
-                kwargs["clientId"], **kwargs
-            )
+            return self.update_client_properties(kwargs["clientId"], **kwargs)
         return response.json()
 
     def create_new_client(self, **kwargs):
@@ -844,22 +844,22 @@ class KeycloakAPIClient:
         if not realm:
             realm = self.realm
         headers = self.__get_admin_access_token_headers()
-        url = "{0}/admin/realms/{1}/users?first=0&max=1&search={2}".format(
+        url = "{0}/admin/realms/{1}/users?first=0&max=100&username={2}".format(
             self.base_url, realm, username
         )
 
         ret = self.send_request("get", url, headers=headers)
 
         self.logger.info("Getting user '{0}' object".format(username))
-        user = json.loads(ret.text)
+        found_users = json.loads(ret.text)
 
-        # keycloak returns a list of 1 element if found, empty if not
-        if len(user) == 1 and user[0]["username"] == username:
-            self.logger.info("Found user '{0}' ({1})".format(username, user[0]["id"]))
-            return user[0]
-        else:
-            self.logger.info("User '{0}' NOT found".format(username))
-            raise ResourceNotFoundError("User not found")
+        for user in found_users:
+            if user["username"] == username:
+                self.logger.info("Found user '{0}' ({1})".format(username, user["id"]))
+                return user
+
+        self.logger.info("User '{0}' NOT found".format(username))
+        raise ResourceNotFoundError("User not found")
 
     def update_user_properties(self, username, realm, **kwargs):
         """
@@ -1012,7 +1012,9 @@ class KeycloakAPIClient:
             username, self.REQUIRED_ACTION_WEBAUTHN_REGISTER
         )
 
-    def is_credential_enabled_for_user(self, username, required_action_type, credential_type):
+    def is_credential_enabled_for_user(
+        self, username, required_action_type, credential_type
+    ):
         """
         Returns True if the required action type or credential type is present for a user, False otherwise
         username: users's username in Keycloak
@@ -1038,9 +1040,21 @@ class KeycloakAPIClient:
 
     def get_user_mfa_settings(self, username):
         user, credentials = self.get_user_and_mfa_credentials(username)
-        otp_must_initialize = (self.REQUIRED_ACTION_CONFIGURE_OTP in user["requiredActions"])
-        otp_enabled = otp_must_initialize or self._has_credential(credentials, self.CREDENTIAL_TYPE_OTP)
-        webauthn_must_initialize = (self.REQUIRED_ACTION_WEBAUTHN_REGISTER in user["requiredActions"])
-        webauthn_enabled = webauthn_must_initialize or self._has_credential(credentials, self.CREDENTIAL_TYPE_WEBAUTHN)
-        return otp_enabled, otp_must_initialize, webauthn_enabled, webauthn_must_initialize
-    
+        otp_must_initialize = (
+            self.REQUIRED_ACTION_CONFIGURE_OTP in user["requiredActions"]
+        )
+        otp_enabled = otp_must_initialize or self._has_credential(
+            credentials, self.CREDENTIAL_TYPE_OTP
+        )
+        webauthn_must_initialize = (
+            self.REQUIRED_ACTION_WEBAUTHN_REGISTER in user["requiredActions"]
+        )
+        webauthn_enabled = webauthn_must_initialize or self._has_credential(
+            credentials, self.CREDENTIAL_TYPE_WEBAUTHN
+        )
+        return (
+            otp_enabled,
+            otp_must_initialize,
+            webauthn_enabled,
+            webauthn_must_initialize,
+        )
