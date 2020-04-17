@@ -1,4 +1,3 @@
-import os
 from typing import Tuple
 
 from authlib_helpers.decorators import AuthLibHelper
@@ -8,11 +7,28 @@ from flask import (
     send_from_directory,
 )
 from flask_cors import CORS
-from flask_restplus import Api, apidoc
+from flask_restx import Api
 
 from auth import UserAuthLibHelper
 from keycloak_api_client.keycloak import KeycloakAPIClient
 from log_utils import configure_logging
+
+
+def configure_keycloak_dependent_variables(app: Flask) -> None:
+    keycloak_server = app.config["KEYCLOAK_SERVER"]
+    api_version = app.config['API_VERSION']
+    realm = app.config["KEYCLOAK_REALM"]
+    app.config.update(
+        # The URL of the endpoint that initiates authentication
+        SWAGGER_AUTHORIZATION_URL=f"https://{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/auth",
+        # Configuration URL for all the keys of the Keycloak server
+        OIDC_JWKS_URL=f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/certs",
+        # The 'iss' field in the token should match this
+        OIDC_ISSUER=f"{keycloak_server}/auth/realms/{realm}",
+        OAUTH_AUTH_URL=f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/auth",
+        API_URL_PREFIX="/api/{}".format(api_version)
+    )
+
 
 def read_env_config(app: Flask):
     try:
@@ -62,7 +78,7 @@ def create_app() -> Tuple[Flask, Api]:
     app.config.from_object("default_adapter_config")
     app.logger = configure_logging()
     read_env_config(app)
-
+    configure_keycloak_dependent_variables(app)
     app.config['KEYCLOAK_CLIENT'] = configure_keycloak_client(app)
     app.config['AUTH_LIB_HELPER'] = configure_authlib_helper(app)
 
@@ -87,16 +103,3 @@ def index():
 def redirect_oauth():
     return send_from_directory("static", "oauth2-redirect.html")
 
-
-class ApiDoc:
-    def __init__(self, title, specs_url):
-        self.title = title
-        self.specs_url = specs_url
-
-
-@api.documentation
-def custom_ui():
-    specs_url = api.specs_url
-    if application.config.get("OAUTH_HTTPS_SWAGGER", False) is True:
-        specs_url = specs_url.replace("http://", "https://")
-    return apidoc.ui_for(ApiDoc(api.title, specs_url))

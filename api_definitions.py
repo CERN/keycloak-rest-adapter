@@ -4,7 +4,7 @@ from flask import (
     jsonify,
     request,
     current_app)
-from flask_restplus import Resource, fields
+from flask_restx import Resource, fields
 
 from app import api
 from app import application

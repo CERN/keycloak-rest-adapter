@@ -1,12 +1,11 @@
 Flask==1.1.1
 gunicorn==19.4.*
 requests==2.23.*
-# We had to fork the repo in order to allow the redirect url to work
-flask-restplus-oauth-redirect==0.13.0
+flask-restx==0.2.0
 # From urllib3 docs: urllib3 (requests) will try to load the default system certificate stores
 # The most reliable cross-platform method is to use the certifi package which provides Mozilla's root certificate bundle
 certifi==2019.11.28
 werkzeug==0.16.1
 flask_cors==3.0.*
-authlib-helpers==1.0.1
+authlib-helpers==1.0.3
 python-dotenv==0.12.0

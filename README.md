@@ -1,7 +1,46 @@
 # Summary
 
-`keycloak-rest-adapter` is a REST API made in Flask that acts as a bridge between the applications of the CERN Authentication and Authorization Service and [Keycloak's Admin REST API](https://www.keycloak.org/docs-api/9.0/rest-api/index.html). It is documented using Swagger: run the application and check the `/swagger-ui` endpoint in your web browser for API documentation.
+`keycloak-rest-adapter` is a REST API made in Flask that abstracts [Keycloak's Admin REST API](https://www.keycloak.org/docs-api/9.0/rest-api/index.html). It is documented using Swagger: run the application and check the `/swagger-ui` endpoint in your web browser for API documentation.
 
+# Configuration
+
+For security reasons, it is recommended that clients typically be registered in a
+custom Keycloak Realm, i.e. not in Master. The REST Adapter is an exception and must be
+registered in the Master Realm to be able to create and manage Keycloak clients.
+
+Register `keycloak-rest-adapter` in the your Keycloak instance, in the "master" realm with
+client credentials enabled. Enable admin permissions for the REST Adapter in the "Service Account Roles" tab.
+
+Modify `default_adapter_config.py` to contain your configuration, notably:
+```
+# Keycloak
+KEYCLOAK_SERVER = "<Your Keycloak server>"
+KEYCLOAK_REALM = "master"
+KEYCLOAK_CLIENT_ID = "keycloak-rest-adapter"
+KEYCLOAK_CLIENT_SECRET ="<Client Secret>"
+```
+
+Now configure OIDC for the REST Adapter. Register `keycloak-rest-adapter` again in Keycloak, this time in realm you use to register clients. Enable Implicit flow since this is used by the Swagger interface.
+
+Modify `default_adapter_config.py` to contain your configuration, notably:
+```
+# Keycloak server 
+KEYCLOAK_SERVER = "https://keycloak-dev.cern.ch"
+# The realm on which the rest adapter operates
+KEYCLOAK_REALM = "cern"
+# Client that needs to have admin rights in the 'cern' realm and exist in the 'master' realm
+KEYCLOAK_CLIENT_ID = "keycloak-rest-adapter"
+# Note that this must be the client secret of the "keycloak-rest-adapter" client in
+# the "master" realm
+KEYCLOAK_SECRET = "xxxx"
+```
+
+If you need to override the default configs, you can set the `KEYCLOAK_REST_ADAPTER_CONFIG` environment variable with the path
+to the configuration overrides:
+
+```
+export KEYCLOAK_REST_ADAPTER_CONFIG=/opt/config/keycloak-overrides.py
+```
 
 # Development
 
@@ -10,13 +49,12 @@
 In order to run the server locally, the simplest way is to use the flask debug server.
 
 Copy the file `default_adapter_config.py` to `test_adapter_config.py` (`test_adapter_config*.py` files are gitignored)
-and override the settings you need to override, most likely `KEYCLOAK_CLIENT_SECRET` and `OAUTH_HTTPS_SWAGGER`:
+and override the settings you need to override, most likely `KEYCLOAK_CLIENT_SECRET`:
 
 ```
 # Note that this must be the client secret of the "keycloak-rest-adapter" client in
-# the "master" realm, not in the "cern" realm.
+# the "master" realm
 KEYCLOAK_CLIENT_SECRET = "blah-blah-guid"
-OAUTH_HTTPS_SWAGGER = False
 ```
 
 The `.flaskenv` file will set `KEYCLOAK_REST_ADAPTER_CONFIG=test_adapter_config.py` so that your
@@ -50,7 +88,7 @@ After the integration tests run you can checkout your things with user/pass: `ad
 
 ## Install dependencies
 
-We manage the dependencies using [pip](https://pypi.org/project/pip/). It is very advisable to install the depedencies in an isolated environment using [virtualenv](https://virtualenv.pypa.io/en/stable/) or a similar tool.
+We manage the dependencies using [pip](https://pypi.org/project/pip/). It is very advisable to install the dependencies in an isolated environment using [virtualenv](https://virtualenv.pypa.io/en/stable/) or a similar tool.
 
 `yum install python3-pip`
 
@@ -67,9 +105,7 @@ $env:PIP_CONFIG_FILE="$pwd\pip.conf"
 pip install -r requirements.txt
 ```
 
-## Configuration 
 
-Register `keycloak-rest-adapter` in the [Application Portal](https://test-application-portal.web.cern.ch) with client credentials enabled. The application needs two roles: `admin` (with full access) and `user` (with access for enabling and disabling own credentials).
 
 # Docker run
 
@@ -95,11 +131,8 @@ find /usr/lib/ -name keycloak_rest_adapter.py
 /usr/lib/python2.7/site-packages/keycloak_rest_adapter-0.1-py2.7.egg/keycloak-rest-adapter/keycloak_rest_adapter.py
 ```
 
-Create the file **keycloak-rest-adapter.service** on _/etc/systemd/system/_.
-
-Now for its content, we can take a look at the example provided [here keycloak-rest-adapter.service](https://gitlab.cern.ch/authzsvc/keycloak-rest-adapter/blob/master/etc/systemd/system/keycloak-rest-adapter.service).
-
-We just need to edit the value of the variable of **ExecStart**,
+Create the file **keycloak-rest-adapter.service** on _/etc/systemd/system/_. We
+need to edit the value of the variable of **ExecStart**,
 and make sure it points to the python script returned before.
 
 Example:

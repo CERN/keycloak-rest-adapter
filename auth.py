@@ -1,4 +1,4 @@
-from importlib.resources import Resource
+from flask_restx import Resource
 from logging import Logger
 from typing import List
 from functools import wraps
