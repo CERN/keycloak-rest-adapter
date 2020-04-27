@@ -1,5 +1,5 @@
 Flask==1.1.1
-gunicorn==19.4.*
+gunicorn>=19.5.0
 requests==2.23.*
 flask-restx==0.2.0
 # From urllib3 docs: urllib3 (requests) will try to load the default system certificate stores
