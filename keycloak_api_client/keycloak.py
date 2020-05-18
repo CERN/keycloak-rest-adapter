@@ -6,6 +6,7 @@ from copy import deepcopy
 import requests
 from log_utils import configure_logging
 from utils import ResourceNotFoundError
+import logging
 
 
 class KeycloakAPIClient:
@@ -203,7 +204,7 @@ class KeycloakAPIClient:
                         )
                         updated_mapper = mapper
                         for key in kwargs:
-                            if mapper["config"].has_key(key):
+                            if key in mapper["config"]:
                                 updated_mapper["config"][key] = kwargs[key]
                             else:
                                 self.logger.error(
@@ -262,7 +263,7 @@ class KeycloakAPIClient:
                         "'{0}' not a valid client property. Skipping...".format(key)
                     )
 
-            ret = self.send_request(
+            self.send_request(
                 "put", url, data=json.dumps(client_object), headers=headers
             )
             if "clientId" in kwargs:
@@ -766,7 +767,6 @@ class KeycloakAPIClient:
         """
         Logs out the user from all his sessions
         """
-        access_token = self.get_access_token()
         url = "{0}/admin/realms/{1}/users/{2}/logout".format(
             self.base_url, self.realm, user_id
         )
@@ -962,7 +962,8 @@ class KeycloakAPIClient:
         required_actions = user["requiredActions"]
         try:
             required_actions.remove(required_action)
-        except:
+        except Exception:
+            logging.error("Exception caught trying to remove user['requiredActions']")
             pass
         self.update_user_properties(
             username, self.mfa_realm, requiredActions=required_actions

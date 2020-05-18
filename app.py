@@ -102,4 +102,3 @@ def index():
 @application.route("/oauth2-redirect.html")
 def redirect_oauth():
     return send_from_directory("static", "oauth2-redirect.html")
-

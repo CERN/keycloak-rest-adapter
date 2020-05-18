@@ -4,6 +4,7 @@ import time
 INTEGRATION_TESTING_IMAGE = "gitlab-registry.cern.ch/authzsvc/docker-images/keycloak"
 INTEGRATION_CONTAINER_NAME = "keycloak-integration"
 
+
 def tear_down_keycloak_docker():
     """
     Tears down the running instance of Keycloak

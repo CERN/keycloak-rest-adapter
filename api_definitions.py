@@ -18,6 +18,7 @@ from utils import (
     validate_protocol_data,
     ResourceNotFoundError,
 )
+import logging
 
 keycloak_client: KeycloakAPIClient = application.config['KEYCLOAK_CLIENT']
 auth_lib_helper: UserAuthLibHelper = application.config['AUTH_LIB_HELPER']
@@ -227,7 +228,8 @@ class CommonCreator(Resource):
             )
         try:
             return jsonify(new_client)
-        except Exception as ex:
+        except Exception:
+            logging.exception("Unknown error creating client")
             return json_response(
                 "Unknown error creating client: {}".format(new_client), 400
             )
@@ -302,17 +304,20 @@ class UserDetails(Resource):
 # DELETE /<username>/authenticator/[method]       : disable method for user
 # POST   /<username>/authenticator/[method]/reset : resets method credentials for user (disables and enables method)
 
+
 def is_otp_enabled(keycloak_client, username):
     return keycloak_client.is_credential_enabled_for_user(
         username,
         keycloak_client.REQUIRED_ACTION_CONFIGURE_OTP,
         keycloak_client.CREDENTIAL_TYPE_OTP)
 
+
 def is_webauthn_enabled(keycloak_client, username):
     return keycloak_client.is_credential_enabled_for_user(
         username,
         keycloak_client.REQUIRED_ACTION_WEBAUTHN_REGISTER,
         keycloak_client.CREDENTIAL_TYPE_WEBAUTHN)
+
 
 @user_ns.route("/<username>/authenticator")
 class MfaSettings(Resource):
@@ -325,13 +330,13 @@ class MfaSettings(Resource):
         try:
             otp_enabled, otp_must_initialize, webauthn_enabled, webauthn_must_initialize = keycloak_client.get_user_mfa_settings(username)
             return json_response({
-                "otp": { 
-                    "enabled" : otp_enabled,
-                    "initialization_required" : otp_must_initialize
+                "otp": {
+                    "enabled": otp_enabled,
+                    "initialization_required": otp_must_initialize
                 },
-                "webauthn": { 
-                    "enabled" : webauthn_enabled,
-                    "initialization_required" : webauthn_must_initialize
+                "webauthn": {
+                    "enabled": webauthn_enabled,
+                    "initialization_required": webauthn_must_initialize
                 }
             })
         except ResourceNotFoundError as e:
@@ -379,6 +384,7 @@ class OTP(Resource):
         keycloak_client.disable_otp_for_user(username)
         return "OTP Disabled", 200
 
+
 @user_ns.route("/<username>/authenticator/otp/reset")
 class OTPReset(Resource):
 
@@ -393,7 +399,6 @@ class OTPReset(Resource):
             keycloak_client.disable_otp_for_user(username)
         keycloak_client.enable_otp_for_user(username)
         return "OTP Enabled and Reset", 200
-
 
 
 @user_ns.route("/<username>/authenticator/webauthn")

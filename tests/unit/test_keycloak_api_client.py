@@ -3,8 +3,6 @@ import os
 import requests
 import sys
 import unittest
-import sys
-import os
 import time
 
 from keycloak_api_client.keycloak import KeycloakAPIClient

@@ -71,7 +71,7 @@ class UserAuthLibHelper(AuthLibHelper):
     # Decorators
     def _validate_factory(self, multifactor: bool = False):
         """
-        Returns a decorator for validation of the auth token. 
+        Returns a decorator for validation of the auth token.
         It needs to decorate a flask_restplus method inside a class.
         """
 
