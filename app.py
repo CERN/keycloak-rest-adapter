@@ -6,6 +6,7 @@ from flask import (
     redirect,
     send_from_directory,
 )
+from werkzeug.contrib.fixers import ProxyFix
 from flask_cors import CORS
 from flask_restx import Api
 
@@ -73,6 +74,7 @@ def create_api(app: Flask) -> Api:
 
 def create_app() -> Tuple[Flask, Api]:
     app = Flask(__name__)
+    app.wsgi_app = ProxyFix(app.wsgi_app)
     CORS(app)
     app.url_map.strict_slashes = False
     app.config.from_object("default_adapter_config")
