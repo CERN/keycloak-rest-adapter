@@ -18,10 +18,14 @@ from log_utils import configure_logging
 def configure_keycloak_dependent_variables(app: Flask) -> None:
     keycloak_server = app.config["KEYCLOAK_SERVER"]
     api_version = app.config['API_VERSION']
-    realm = app.config["KEYCLOAK_REALM"]
+    realm = app.config["OIDC_REALM"]
+    authorizations = app.config["OAUTH_AUTHORIZATIONS"]
+    authorizations["oauth2"].update({
+        "tokenUrl": f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/token",
+        "authorizationUrl": f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/auth"
+    })
     app.config.update(
-        # The URL of the endpoint that initiates authentication
-        SWAGGER_AUTHORIZATION_URL=f"https://{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/auth",
+        OAUTH_AUTHORIZATIONS=authorizations,
         # Configuration URL for all the keys of the Keycloak server
         OIDC_JWKS_URL=f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/certs",
         # The 'iss' field in the token should match this

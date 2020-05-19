@@ -17,11 +17,13 @@ SWAGGER_UI_OAUTH_CLIENT_ID = "keycloak-rest-adapter"
 # OIDC config
 # The client ID used to validate incoming calls
 OIDC_CLIENT_ID = "keycloak-rest-adapter"
+OIDC_REALM = "cern"
 OAUTH_AUTHORIZATIONS = {
     "oauth2": {
         "type": "oauth2",
-        "flow": "implicit",
+        "flow": "authorizationCode",
         # "authorizationUrl": None,
+        # "tokenUrl": None,
         # Set this in order to not have it by default keycloak server + realm
     }
 }
