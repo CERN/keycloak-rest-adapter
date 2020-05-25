@@ -53,12 +53,22 @@ stages:
     - oc tag "gitlab-registry.cern.ch/${LOWERCASE_PATH}:${TAG}" "${APP_NAME}:latest" --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
 
 ### Linting
-lint:
+flake8:
+  image: python:3.8-alpine
   stage: lint
   before_script:
     - pip install -r dev-requirements.txt
   script:
     - flake8
+  allow_failure: true
+
+pylint:
+  image: python:3.8-alpine
+  stage: lint
+  before_script:
+    - pip install -r dev-requirements.txt
+  script:
+    - pylint
   allow_failure: true
 
 ### Testing

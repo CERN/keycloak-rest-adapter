@@ -2,3 +2,4 @@ docker
 pytest
 coverage
 flake8
+pylint

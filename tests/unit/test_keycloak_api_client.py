@@ -48,7 +48,7 @@ class TestKeycloakApiClient(unittest.TestCase):
             self.server,
             "test",
             "keycloak-rest-adapter",
-            "111d61ea-b890-4285-b742-e0c417c5e513",
+            "42ac0602-a08e-49f7-9b92-44afd622d29c",
         )
 
     def test_create_oidc_client(self):
