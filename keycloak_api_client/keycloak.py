@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
 import json
+import logging
+from typing import Dict, Any
 from copy import deepcopy
 
 import requests
+
 from log_utils import configure_logging
 from utils import ResourceNotFoundError
-import logging
 
 
 class KeycloakAPIClient:
@@ -17,15 +19,24 @@ class KeycloakAPIClient:
     KeycloakAPI Client to interact with the Keycloak API.
     """
 
-    def __init__(
-        self,
-        server,
-        realm,
-        client_id,
-        client_secret,
-        master_realm="master",
-        mfa_realm="mfa",
-    ):
+    def init_app(self, app):
+        """
+        Initialize the adapter based on the app config
+        """
+        self._initialize(
+            app.config['KEYCLOAK_SERVER'],
+            app.config['KEYCLOAK_REALM'],
+            app.config['KEYCLOAK_CLIENT_ID'],
+            app.config['KEYCLOAK_CLIENT_SECRET']
+        )
+
+    def _initialize(self,
+            server,
+            realm,
+            client_id,
+            client_secret,
+            master_realm="master",
+            mfa_realm="mfa",):
         """
         Initialize the class with the params needed to use the API.
         server: keycloak server: ex. https://keycloak-server.cern.ch
@@ -42,24 +53,11 @@ class KeycloakAPIClient:
         self.mfa_realm = mfa_realm
 
         self.base_url = "{}/auth".format(self.keycloak_server)
-        self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        self.logger = configure_logging()
-        # Persistent SSL configuration
-        # http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
-        self.session = requests.Session()
-
         self.logger.info(
             "Client configured to talk to '{0}' server and realm '{1}'".format(
                 self.keycloak_server, self.realm
             )
         )
-        self.access_token_object = None
-
-        # Keycloak constants
-        self.CREDENTIAL_TYPE_OTP = "otp"
-        self.CREDENTIAL_TYPE_WEBAUTHN = "webauthn"
-        self.REQUIRED_ACTION_CONFIGURE_OTP = "CONFIGURE_TOTP"
-        self.REQUIRED_ACTION_WEBAUTHN_REGISTER = "webauthn-register"
 
         # danielfr quick hack, in non master realms "master-realm" client is replaced by "realm-management"
         if realm == "master":
@@ -70,6 +68,29 @@ class KeycloakAPIClient:
             self.master_realm_client = self.get_client_by_client_id(
                 "realm-management", self.realm
             )
+
+    def __init__(self):
+        self.keycloak_server = None
+        self.realm = None
+        self.client_id = None
+        self.client_secret = None
+        self.master_realm = None
+        self.mfa_realm = None
+
+        self.base_url = None
+        self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        self.logger = configure_logging()
+        # Persistent SSL configuration
+        # http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
+        self.session = requests.Session()
+
+        # Keycloak constants
+        self.CREDENTIAL_TYPE_OTP = "otp"
+        self.CREDENTIAL_TYPE_WEBAUTHN = "webauthn"
+        self.REQUIRED_ACTION_CONFIGURE_OTP = "CONFIGURE_TOTP"
+        self.REQUIRED_ACTION_WEBAUTHN_REGISTER = "webauthn-register"
+        self.access_token_object = None
+        self.master_realm_client = None
 
     def __send_request(self, request_type, url, **kwargs):
         # if there is 'headers' in kwargs use it instead of default class one
@@ -369,7 +390,7 @@ class KeycloakAPIClient:
         else:
             self.logger.info("Cannot delete '{0}'. Client not found".format(client_id))
 
-    def get_client_by_client_id(self, client_id, realm=None):
+    def get_client_by_client_id(self, client_id, realm=None) -> Dict[str, Any]:
         """
         Get the list of clients that match the given clientID name
         """
@@ -409,6 +430,9 @@ class KeycloakAPIClient:
 
         # keycloak returns a list of all matching policies
         matching_policies = json.loads(ret.text)
+        if isinstance(matching_policies, dict):
+            if 'error' in matching_policies:
+                return []
         # return exact match
         return [policy for policy in matching_policies if policy["name"] == policy_name]
 
@@ -634,6 +658,10 @@ class KeycloakAPIClient:
         return ret
 
     def get_permission_associated_policies(self, permission_id):
+        """
+        Gets all the policies associated to a permission
+        :param permission_id: The ID of the permission
+        """
         url = "{0}/admin/realms/{1}/clients/{2}/authz/resource-server/policy/{3}/associatedPolicies".format(
             self.base_url, self.realm, self.master_realm_client["id"], permission_id
         )
@@ -652,23 +680,6 @@ class KeycloakAPIClient:
         ret = self.send_request("get", url, headers=headers, params=payload)
         # return clients as list of json instead of string
         return json.loads(ret.text)
-
-    def refresh_admin_token(self, admin_token):
-        """
-        https://www.keycloak.org/docs/2.5/server_development/topics/admin-rest-api.html
-        """
-        self.logger.info("Refreshing admin access token")
-        grant_type = "refresh_token"
-        refresh_token = self.access_token_object["refresh_token"]
-
-        url = "{0}/realms/{1}/protocol/openid-connect/token".format(
-            self.base_url, self.master_realm
-        )
-        payload = "refresh_token={0}&grant_type={1}&client_id={2}&client_secret={3}".format(
-            refresh_token, grant_type, self.client_id, self.client_secret
-        )
-        ret = self.send_request("post", url, data=payload)
-        return json.loads(ret.tex)
 
     def get_admin_access_token(self):
         """
@@ -759,7 +770,7 @@ class KeycloakAPIClient:
         }
         url = "{0}/admin/realms/{1}/clients".format(self.base_url, self.realm)
         self.logger.info(
-            "Creating client '{0}' --> {1}".format(kwargs["clientId"], kwargs)
+            "Creating client '%s' --> %s", kwargs["clientId"], kwargs
         )
         return self.send_request("post", url, headers=headers, json=kwargs)
 
@@ -876,7 +887,7 @@ class KeycloakAPIClient:
                     self.logger.debug("Changing value: {}".format(value))
                     user_object[key] = value
                 else:
-                    self.logger.warn(
+                    self.logger.warning(
                         "'{0}' not a valid client property. Skipping...".format(key)
                     )
             self.send_request("put", url, data=json.dumps(user_object), headers=headers)
@@ -964,10 +975,40 @@ class KeycloakAPIClient:
             required_actions.remove(required_action)
         except Exception:
             logging.error("Exception caught trying to remove user['requiredActions']")
-            pass
         self.update_user_properties(
             username, self.mfa_realm, requiredActions=required_actions
         )
+
+    def create_user(self, username, realm=None):
+        """
+        Creates a new user resource on the server
+        https://www.keycloak.org/docs-api/10.0/rest-api/index.html#_users_resource
+        """
+        if not realm:
+            realm = self.realm
+        headers = self.__get_admin_access_token_headers()
+        url = "{0}/admin/realms/{1}/users".format(
+            self.base_url, realm
+        )
+
+        user_data = {"username": username}
+        ret = self.send_request("post", url, data=json.dumps(user_data), headers=headers)
+        return ret
+
+    def delete_user(self, user_id, realm=None):
+        """
+        Deletes a user resource on the server
+        https://www.keycloak.org/docs-api/10.0/rest-api/index.html#_users_resource
+        """
+        if not realm:
+            realm = self.realm
+        headers = self.__get_admin_access_token_headers()
+        url = "{0}/admin/realms/{1}/users/{2}".format(
+            self.base_url, realm, user_id
+        )
+
+        ret = self.send_request("delete", url, headers=headers)
+        return ret
 
     def enable_otp_for_user(self, username):
         """
@@ -1059,3 +1100,6 @@ class KeycloakAPIClient:
             webauthn_enabled,
             webauthn_must_initialize,
         )
+
+
+keycloak_client: KeycloakAPIClient = KeycloakAPIClient()

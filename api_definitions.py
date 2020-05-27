@@ -1,27 +1,22 @@
+import logging
 from copy import deepcopy
 
-from flask import (
-    jsonify,
-    request,
-    current_app)
-from flask_restx import Resource, fields
+from flask import current_app, jsonify, request
+from flask_restx import Resource, fields, Api
 
-from app import api
-from app import application
-from auth import UserAuthLibHelper
-from keycloak_api_client.keycloak import KeycloakAPIClient
-from utils import (
-    json_response,
-    get_request_data,
-    is_xml,
-    validate_protocol,
-    validate_protocol_data,
-    ResourceNotFoundError,
+from auth import auth_lib_helper
+from keycloak_api_client.keycloak import keycloak_client
+from utils import (ResourceNotFoundError, get_request_data, is_xml,
+                   json_response, validate_protocol, validate_protocol_data)
+
+
+api = Api(
+    title="Keycloak Rest Adapter API",
+    description="A simple Keycloak adapter for handling clients",
+    security={'oauth2': ['api']},
+    doc="/swagger-ui",
 )
-import logging
 
-keycloak_client: KeycloakAPIClient = application.config['KEYCLOAK_CLIENT']
-auth_lib_helper: UserAuthLibHelper = application.config['AUTH_LIB_HELPER']
 
 ns = api.namespace("client", description="Client operations")
 user_ns = api.namespace("user", description="Methods for handling user operations")
@@ -82,8 +77,9 @@ class TokenExchangePermissions(Resource):
             ret = keycloak_client.revoke_token_exchange_permissions(
                 target_client, requestor_client
             )
-        except ValueError as e:
-            return e.args[0], 404
+        except ValueError as error:
+            return error.args[0], 404
+        logging.info(ret.status_code)
         if ret.status_code == 200 or ret.status_code == 201:
             return "Deleted", 200
         else:
@@ -305,18 +301,24 @@ class UserDetails(Resource):
 # POST   /<username>/authenticator/[method]/reset : resets method credentials for user (disables and enables method)
 
 
-def is_otp_enabled(keycloak_client, username):
-    return keycloak_client.is_credential_enabled_for_user(
+def is_otp_enabled(client, username):
+    """
+    Check if OTP is enabled for the user
+    """
+    return client.is_credential_enabled_for_user(
         username,
-        keycloak_client.REQUIRED_ACTION_CONFIGURE_OTP,
-        keycloak_client.CREDENTIAL_TYPE_OTP)
+        client.REQUIRED_ACTION_CONFIGURE_OTP,
+        client.CREDENTIAL_TYPE_OTP)
 
 
-def is_webauthn_enabled(keycloak_client, username):
-    return keycloak_client.is_credential_enabled_for_user(
+def is_webauthn_enabled(client, username):
+    """
+    Check if WebAuthN is enabled for the user
+    """
+    return client.is_credential_enabled_for_user(
         username,
-        keycloak_client.REQUIRED_ACTION_WEBAUTHN_REGISTER,
-        keycloak_client.CREDENTIAL_TYPE_WEBAUTHN)
+        client.REQUIRED_ACTION_WEBAUTHN_REGISTER,
+        client.CREDENTIAL_TYPE_WEBAUTHN)
 
 
 @user_ns.route("/<username>/authenticator")

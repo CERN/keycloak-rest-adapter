@@ -59,7 +59,7 @@ flake8:
   before_script:
     - pip install -r dev-requirements.txt
   script:
-    - flake8
+    - python -m flake8 *.py keycloak_api_client
   allow_failure: true
 
 pylint:
@@ -68,18 +68,17 @@ pylint:
   before_script:
     - pip install -r dev-requirements.txt
   script:
-    - pylint
+    - python -m pylint *.py keycloak_api_client
   allow_failure: true
 
 ### Testing
 test:
-  # TODO remove, temporary thing while checking out the docker image problems
-  allow_failure: true
   stage: test
   services:
     - name: gitlab-registry.cern.ch/authzsvc/docker-images/keycloak
       alias: keycloak
   variables:
+    RUN_INTEGRATION: 1
     KEYCLOAK_USER: "admin"
     KEYCLOAK_PASSWORD: "admin"
   before_script:
@@ -95,7 +94,7 @@ test:
     reports:
       cobertura: coverage.xml
     paths:
-      - htmlcov
+      - coverage_html_report
     expire_in: 1 week
 
 ### Docker build definitions

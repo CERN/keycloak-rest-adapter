@@ -2,7 +2,7 @@ from flask_restx import Resource
 from logging import Logger
 from typing import List
 from functools import wraps
-
+from flask import Flask
 from authlib.oidc.core import ImplicitIDToken, UserInfo
 from authlib_helpers import AuthLibHelper, json_response
 from authlib_helpers.decorators import ImplicitIDTokenNoNonce
@@ -13,20 +13,17 @@ class UserAuthLibHelper(AuthLibHelper):
     Authlib helper extension adding a second authentication decorator for the rest adapter
     """
 
-    def __init__(
-        self,
-        user_access_role: str,
-        multifactor_role: str,
-        access_role: str,
-        client_id: str,
-        authorized_apps: List[str],
-        oidc_jwks_url: str,
-        oidc_issuer: str,
-        logger: Logger,
-        claims_class: ImplicitIDToken = ImplicitIDTokenNoNonce,
-    ):
+    def _initialize(self,
+            user_access_role: str,
+            multifactor_role: str,
+            access_role: str,
+            client_id: str,
+            authorized_apps: List[str],
+            oidc_jwks_url: str,
+            oidc_issuer: str,
+            logger: Logger):
         """
-        Constructor
+        Inits data based on passed params
         :param user_access_role: the role needed in order to perform self-service (user) operations
         :param access_role: the role needed in order to have full API access
         :param client_id: the ID of the client which is behind OIDC
@@ -34,19 +31,52 @@ class UserAuthLibHelper(AuthLibHelper):
         :param oidc_jwks_url: the URL to the JWKS url
         :param oidc_issuer: the issuer of the token
         :param logger: the logger for the application
-        :param claims_class: the class used for validation of claims, could be something else in case of specific needs
         """
-        super(UserAuthLibHelper, self).__init__(
+        self.user_access_role = user_access_role
+        self.multifactor_role = multifactor_role
+        super().init_data(
             access_role=access_role,
             client_id=client_id,
             authorized_apps=authorized_apps,
             oidc_jwks_url=oidc_jwks_url,
             oidc_issuer=oidc_issuer,
-            logger=logger,
-            claims_class=claims_class,
+            logger=logger
         )
-        self.user_access_role = user_access_role
-        self.multifactor_role = multifactor_role
+
+    def __init__(
+        self,
+        claims_class: ImplicitIDToken = ImplicitIDTokenNoNonce,
+    ):
+        """
+        Parameterless Constructor
+
+        :param claims_class: the class used for validation of claims, could be something else in case of specific needs
+        """
+        super(UserAuthLibHelper, self).__init__(
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            claims_class=claims_class)
+        self.user_access_role: str = None
+        self.multifactor_role: str = None
+
+    def init_app(self, app: Flask):
+        """
+        Initialize from an application's config
+        """
+        self._initialize(
+            user_access_role=app.config['AUTH_USER_ACTIONS_ROLE'],
+            multifactor_role=app.config['AUTH_USER_ACTIONS_MFA_ROLE'],
+            access_role=app.config['AUTH_API_ACCESS_ROLE'],
+            client_id=app.config['OIDC_CLIENT_ID'],
+            authorized_apps=app.config['AUTH_AUTHORIZED_APPS'],
+            oidc_jwks_url=app.config['OIDC_JWKS_URL'],
+            oidc_issuer=app.config['OIDC_ISSUER'],
+            logger=app.logger
+        )
 
     def _validate_user_access(
         self, access_token: UserInfo, username: str, multifactor: bool
@@ -64,8 +94,8 @@ class UserAuthLibHelper(AuthLibHelper):
         try:
             if role in access_token["resource_access"][self.oidc_client_id]["roles"]:
                 return access_token["sub"] == username
-        except Exception as e:
-            self.logger.error(e)
+        except KeyError as error:
+            self.logger.error(error)
         return False
 
     # Decorators
@@ -112,3 +142,6 @@ class UserAuthLibHelper(AuthLibHelper):
         """
         decorator = self._validate_factory(multifactor=True)
         return decorator(func)
+
+
+auth_lib_helper: UserAuthLibHelper = UserAuthLibHelper()

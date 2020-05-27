@@ -133,3 +133,4 @@ dmypy.json
 config
 .gitlab-ci.yml
 openshift
+coverage_html_report
