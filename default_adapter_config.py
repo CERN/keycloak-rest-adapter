@@ -3,12 +3,13 @@ API_VERSION = "v1.0"
 
 # Keycloak
 KEYCLOAK_SERVER = "https://keycloak-dev.cern.ch"
-# Note this must be master
-KEYCLOAK_REALM = "master"
 KEYCLOAK_CLIENT_ID = "keycloak-rest-adapter"
 # Note that this must be the client secret of the "keycloak-rest-adapter" client in
 # the "master" realm
 KEYCLOAK_CLIENT_SECRET = "DELETED"
+
+# Note this is the realm where clients will be created
+KEYCLOAK_REALM = "cern"
 
 # OAuth config (for the Swagger UI)
 # The client ID used to login from the UI

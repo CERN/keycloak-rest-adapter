@@ -9,6 +9,7 @@ from keycloak_api_client.keycloak import keycloak_client
 from utils import (ResourceNotFoundError, get_request_data, is_xml,
                    json_response, validate_protocol, validate_protocol_data)
 
+from log_utils import configure_logging
 
 api = Api(
     title="Keycloak Rest Adapter API",
@@ -171,6 +172,7 @@ class CommonCreator(Resource):
         super(CommonCreator, self).__init__(*args, **kwargs)
         self.protocol_mappers = current_app.config['CLIENT_DEFAULTS']
         self.auth_protocols = current_app.config['AUTH_PROTOCOLS']
+        self.logger = configure_logging()
 
     def _create_oidc_protocol_mapper(self, data):
         """
@@ -199,10 +201,19 @@ class CommonCreator(Resource):
                 client_description = keycloak_client.client_description_converter(
                     data[selected_protocol_id]
                 )
-                # load saml protocol mappers
-                saml_defaults = deepcopy(self.protocol_mappers[protocol])
-                client_description.update(saml_defaults)
-                new_client = keycloak_client.create_new_client(**client_description)
+                # Remove definition from data now it's already been processed
+                data.pop(selected_protocol_id)
+
+                # AuthnRequestsSigned attribute is not being correctly parsed by keycloak
+                # If there is no signing certificate, set the clientCertificateRequired attribute to False
+                if client_description['attributes'].get('saml.signing.certificate') == None :
+                    client_description['attributes']['saml.client.signature'] = "false"
+
+                # Copy in the default parameters and update them with the ones we received
+                saml_params = deepcopy(self.protocol_mappers[protocol])
+                saml_params.update(data)
+                saml_params.update(client_description)
+                new_client = keycloak_client.create_new_client(**saml_params)
             elif protocol == "openid":
                 client_params = deepcopy(self.protocol_mappers[protocol])
                 client_params.update(data)
