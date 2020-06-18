@@ -316,7 +316,6 @@ class KeycloakAPIClient:
             self.base_url, self.realm
         )
         ret = self.send_request("post", url, headers=headers, data=payload)
-        self.logger.info( "Converted to: '{0}'".format( ret.text ) )
         return json.loads(ret.text)
 
     def display_client_secret(self, client_id):
