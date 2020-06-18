@@ -9,7 +9,6 @@ from keycloak_api_client.keycloak import keycloak_client
 from utils import (ResourceNotFoundError, get_request_data, is_xml,
                    json_response, validate_protocol, validate_protocol_data)
 
-from log_utils import configure_logging
 
 api = Api(
     title="Keycloak Rest Adapter API",
@@ -172,7 +171,6 @@ class CommonCreator(Resource):
         super(CommonCreator, self).__init__(*args, **kwargs)
         self.protocol_mappers = current_app.config['CLIENT_DEFAULTS']
         self.auth_protocols = current_app.config['AUTH_PROTOCOLS']
-        self.logger = configure_logging()
 
     def _create_oidc_protocol_mapper(self, data):
         """

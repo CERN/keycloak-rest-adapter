@@ -10,7 +10,7 @@ token_resp = requests.post(
         "grant_type": "client_credentials",
         "client_id": "authorization-service-api",
         # MAKE SURE THE SECRET IS DELETED
-        "client_secret": "09ceaa4d-ce3a-4539-b580-2024cebecf93",
+        "client_secret": "<DELETED>",
         "audience": "keycloak-rest-adapter"
     },
     headers={"Content-Type": "application/x-www-form-urlencoded"},
