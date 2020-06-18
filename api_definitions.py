@@ -206,7 +206,7 @@ class CommonCreator(Resource):
 
                 # AuthnRequestsSigned attribute is not being correctly parsed by keycloak
                 # If there is no signing certificate, set the clientCertificateRequired attribute to False
-                if client_description['attributes'].get('saml.signing.certificate') == None :
+                if client_description.get('attributes') and client_description['attributes'].get('saml.signing.certificate') == None :
                     client_description['attributes']['saml.client.signature'] = "false"
 
                 # Copy in the default parameters and update them with the ones we received
