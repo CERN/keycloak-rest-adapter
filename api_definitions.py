@@ -199,10 +199,17 @@ class CommonCreator(Resource):
                 client_description = keycloak_client.client_description_converter(
                     data[selected_protocol_id]
                 )
-                # load saml protocol mappers
-                saml_defaults = deepcopy(self.protocol_mappers[protocol])
-                client_description.update(saml_defaults)
-                new_client = keycloak_client.create_new_client(**client_description)
+                # AuthnRequestsSigned attribute is not being correctly parsed by keycloak
+                # If there is no signing certificate, set the clientCertificateRequired attribute to False
+                if client_description.get('attributes') and client_description['attributes'].get('saml.signing.certificate') == None :
+                    client_description['attributes']['saml.client.signature'] = "false"
+
+                # Copy in the default parameters and update them with the ones we received
+                saml_params = deepcopy(self.protocol_mappers[protocol])
+                # Copy in all incoming data, except the initial definition that has already been converted
+                saml_params.update({k:v for k,v in data.items() if k not in [ selected_protocol_id ]})
+                saml_params.update(client_description)
+                new_client = keycloak_client.create_new_client(**saml_params)
             elif protocol == "openid":
                 client_params = deepcopy(self.protocol_mappers[protocol])
                 client_params.update(data)
