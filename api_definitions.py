@@ -211,8 +211,6 @@ class CommonCreator(Resource):
                 if client_description.get('attributes') and client_description['attributes'].get('saml.signing.certificate') == None :
                     client_description['attributes']['saml.client.signature'] = "false"
 
-                logging.info(client_description)
-
                 # Copy in the default parameters and update them with the ones we received
                 saml_params = deepcopy(self.protocol_mappers[protocol])
                 # Copy in all incoming data, except the initial definition that has already been converted
