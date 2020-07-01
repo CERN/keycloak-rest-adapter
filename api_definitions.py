@@ -1,5 +1,6 @@
 import logging
 from copy import deepcopy
+from urllib.parse import urlparse
 
 from flask import current_app, jsonify, request
 from flask_restx import Resource, fields, Api
@@ -193,6 +194,12 @@ class CommonCreator(Resource):
         """
         protocol = data["protocol"]
         selected_protocol_id = deepcopy(self.auth_protocols[protocol])
+
+        def redirects_to_cern(redirects):
+            hostnames = [urlparse(s).hostname for s in redirects]
+            cernhostnames = [s for s in hostnames if s.endswith("cern.ch") or s.endswith(".cern")]
+            return len(cernhostnames) > 0
+
         if selected_protocol_id in data:
             if is_xml(data[selected_protocol_id]):
                 # if data looks like XML use the client description converter to create client
@@ -204,19 +211,32 @@ class CommonCreator(Resource):
                 if client_description.get('attributes') and client_description['attributes'].get('saml.signing.certificate') == None :
                     client_description['attributes']['saml.client.signature'] = "false"
 
+                logging.info(client_description)
+
                 # Copy in the default parameters and update them with the ones we received
                 saml_params = deepcopy(self.protocol_mappers[protocol])
                 # Copy in all incoming data, except the initial definition that has already been converted
                 saml_params.update({k:v for k,v in data.items() if k not in [ selected_protocol_id ]})
                 saml_params.update(client_description)
+
+                # If the redirect URI is not .cern or a .cern.ch, enable consent
+                if not redirects_to_cern(client_description["redirectUris"]):
+                    saml_params["consentRequired"] = True;
+
                 new_client = keycloak_client.create_new_client(**saml_params)
             elif protocol == "openid":
                 client_params = deepcopy(self.protocol_mappers[protocol])
                 client_params.update(data)
+
                 # Include the audience mapper by default
                 if "protocolMappers" not in client_params:
                     client_params["protocolMappers"] = {}
                 client_params["protocolMappers"].append(self._create_oidc_protocol_mapper(data))
+
+                # If the redirect URI is not .cern or a .cern.ch, enable consent
+                if not redirects_to_cern(client_params["redirectUris"]):
+                    client_params["consentRequired"] = True
+
                 new_client = keycloak_client.create_new_client(**client_params)
             else:
                 return json_response(
