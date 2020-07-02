@@ -32,8 +32,30 @@ class TestClientCreationApi(WebTestBase):
                     "protocolMapper": "oidc-audience-mapper",
                 }
             ],
+            "redirectUris":["ch.cern.app:/dasd", "https://test.cern.ch"],
             "webOrigins": ['+'],
             "consentRequired": False,
+            "clientId": self.client_id,
+            "protocol": 'openid'
+        }
+
+    def _mock_oidc_call_consent_required(self):
+        return {
+            "protocolMappers": [
+                {
+                    "protocol": "openid-connect",
+                    "config": {
+                        "id.token.claim": "false",
+                        "access.token.claim": "true",
+                        "included.client.audience": self.client_id,
+                    },
+                    "name": "audience",
+                    "protocolMapper": "oidc-audience-mapper",
+                }
+            ],
+            "redirectUris": ["ch.test.app:/dasd", "https://test.com"],
+            "webOrigins": ['+'],
+            "consentRequired": True,
             "clientId": self.client_id,
             "protocol": 'openid'
         }
@@ -91,6 +113,21 @@ class TestClientCreationApi(WebTestBase):
         self.assertEqual(400, resp.status_code)
         self.assertTrue("Unknown error creating client".casefold() in resp.json['data'].casefold())
 
+    def test_consent_enabled_external(self):
+        mock_creation = {"clientId": self.client_id}
+        expected_call = self._mock_oidc_call_consent_required()
+        self.keycloak_api_mock.create_new_client.return_value = mock_creation
+
+        # act (redirectUris outside CERN)
+        resp = self.app_client.post(self._get_endpoint("openid"),
+            data=json.dumps({"clientId": self.client_id, "redirectUris":["ch.test.app:/dasd", "https://test.com"]}),
+            content_type='application/json')
+
+        # assert
+        self.assertEqual(200, resp.status_code)
+        self.assertDictEqual(mock_creation, resp.json)
+        self.keycloak_api_mock.create_new_client.assert_called_with(**expected_call)
+
     def test_create_oidc_works_fine(self):
         # prepare
         mock_creation = {"clientId": self.client_id}
@@ -99,7 +136,7 @@ class TestClientCreationApi(WebTestBase):
 
         # act
         resp = self.app_client.post(self._get_endpoint("openid"),
-            data=json.dumps({"clientId": self.client_id}),
+            data=json.dumps({"clientId": self.client_id, "redirectUris":["ch.cern.app:/dasd", "https://test.cern.ch"]}),
             content_type='application/json')
 
         # assert

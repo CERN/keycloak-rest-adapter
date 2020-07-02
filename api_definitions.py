@@ -188,17 +188,28 @@ class CommonCreator(Resource):
             "protocolMapper": "oidc-audience-mapper",
         }
 
+    def _redirects_to_cern(self, redirects):
+        """ Sees whether at least one of the redirect Uris goes to
+        a CERN domain
+        """
+        for redirect in redirects:
+            try:
+                hostname = urlparse(redirect).hostname
+                if  hostname.endswith("cern.ch") or hostname.endswith(".cern"):
+                    return True
+            except AttributeError:
+                # Could be a native app hostname
+                if redirect.startswith("ch.cern"):
+                    return True
+        # No CERN redirect found
+        return False
+
     def common_create(self, data):
         """
         Common create method for all the endpoints
         """
         protocol = data["protocol"]
         selected_protocol_id = deepcopy(self.auth_protocols[protocol])
-
-        def redirects_to_cern(redirects):
-            hostnames = [urlparse(s).hostname for s in redirects]
-            cernhostnames = [s for s in hostnames if s.endswith("cern.ch") or s.endswith(".cern")]
-            return len(cernhostnames) > 0
 
         if selected_protocol_id in data:
             if is_xml(data[selected_protocol_id]):
@@ -218,7 +229,7 @@ class CommonCreator(Resource):
                 saml_params.update(client_description)
 
                 # If the redirect URI is not .cern or a .cern.ch, enable consent
-                if not redirects_to_cern(client_description["redirectUris"]):
+                if client_description.get('redirectUris') and not self._redirects_to_cern(client_description["redirectUris"]):
                     saml_params["consentRequired"] = True;
 
                 new_client = keycloak_client.create_new_client(**saml_params)
@@ -232,7 +243,7 @@ class CommonCreator(Resource):
                 client_params["protocolMappers"].append(self._create_oidc_protocol_mapper(data))
 
                 # If the redirect URI is not .cern or a .cern.ch, enable consent
-                if not redirects_to_cern(client_params["redirectUris"]):
+                if client_params.get('redirectUris') and not self._redirects_to_cern(client_params["redirectUris"]):
                     client_params["consentRequired"] = True
 
                 new_client = keycloak_client.create_new_client(**client_params)
