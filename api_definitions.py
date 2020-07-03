@@ -1,6 +1,7 @@
 import logging
 from copy import deepcopy
 from urllib.parse import urlparse
+import re
 
 from flask import current_app, jsonify, request
 from flask_restx import Resource, fields, Api
@@ -188,20 +189,22 @@ class CommonCreator(Resource):
             "protocolMapper": "oidc-audience-mapper",
         }
 
-    def _redirects_to_cern(self, redirects):
-        """ Sees whether at least one of the redirect Uris goes to
-        a CERN domain
+    def _redirects_outside_cern(self, redirects):
+        """ Sees whether at least one of the redirect Uris goes outside
+        CERN or localhost. In this case, assume that the CERN or localhost
+        redirects are used for testing within CERN.
         """
+        p = re.compile(api.app.config['NON_CONSENT_DOMAINS_REGEX'],)
         for redirect in redirects:
             try:
                 hostname = urlparse(redirect).hostname
-                if  hostname.endswith("cern.ch") or hostname.endswith(".cern"):
+                if not p.search(hostname):
                     return True
-            except AttributeError:
+            except (AttributeError, TypeError):
                 # Could be a native app hostname
-                if redirect.startswith("ch.cern"):
+                if not redirect.startswith("ch.cern"):
                     return True
-        # No CERN redirect found
+        # No external redirect found
         return False
 
     def common_create(self, data):
@@ -229,7 +232,7 @@ class CommonCreator(Resource):
                 saml_params.update(client_description)
 
                 # If the redirect URI is not .cern or a .cern.ch, enable consent
-                if client_description.get('redirectUris') and not self._redirects_to_cern(client_description["redirectUris"]):
+                if client_description.get('redirectUris') and self._redirects_outside_cern(client_description["redirectUris"]):
                     saml_params["consentRequired"] = True;
 
                 new_client = keycloak_client.create_new_client(**saml_params)
@@ -243,7 +246,7 @@ class CommonCreator(Resource):
                 client_params["protocolMappers"].append(self._create_oidc_protocol_mapper(data))
 
                 # If the redirect URI is not .cern or a .cern.ch, enable consent
-                if client_params.get('redirectUris') and not self._redirects_to_cern(client_params["redirectUris"]):
+                if client_params.get('redirectUris') and self._redirects_outside_cern(client_params["redirectUris"]):
                     client_params["consentRequired"] = True
 
                 new_client = keycloak_client.create_new_client(**client_params)

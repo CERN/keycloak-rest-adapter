@@ -6,7 +6,7 @@ KEYCLOAK_SERVER = "https://keycloak-dev.cern.ch"
 KEYCLOAK_CLIENT_ID = "keycloak-rest-adapter"
 # Note that this must be the client secret of the "keycloak-rest-adapter" client in
 # the "master" realm
-KEYCLOAK_CLIENT_SECRET = "DELETED"
+KEYCLOAK_CLIENT_SECRET = "fd12b638-f34d-44ef-83e9-579dc9833762"
 
 # Note this is the realm where clients will be created
 KEYCLOAK_REALM = "cern"
@@ -34,7 +34,7 @@ CLIENT_DEFAULTS = {
     "openid": {
         "protocolMappers": [],
         "webOrigins": ["+"],
-        "consentRequired": False
+        "consentRequired": False,
     },
     "saml": {
         "protocolMappers": [],
@@ -53,3 +53,6 @@ AUTH_AUTHORIZED_APPS = ["authorization-service-api"]
 AUTH_API_ACCESS_ROLE = "admin"
 AUTH_USER_ACTIONS_ROLE = "user"
 AUTH_USER_ACTIONS_MFA_ROLE = "user_mfa"
+
+# Non-consent domains (i.e. CERN & Localhost)
+NON_CONSENT_DOMAINS_REGEX = "(cern\.ch$|\.cern$|localhost$)"
