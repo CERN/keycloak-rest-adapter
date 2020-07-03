@@ -6,7 +6,7 @@ KEYCLOAK_SERVER = "https://keycloak-dev.cern.ch"
 KEYCLOAK_CLIENT_ID = "keycloak-rest-adapter"
 # Note that this must be the client secret of the "keycloak-rest-adapter" client in
 # the "master" realm
-KEYCLOAK_CLIENT_SECRET = "fd12b638-f34d-44ef-83e9-579dc9833762"
+KEYCLOAK_CLIENT_SECRET = "DELETED"
 
 # Note this is the realm where clients will be created
 KEYCLOAK_REALM = "cern"
