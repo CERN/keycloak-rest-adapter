@@ -369,15 +369,17 @@ class MfaSettings(Resource):
         Gets all the MFA settings for the user
         """
         try:
-            otp_enabled, otp_must_initialize, webauthn_enabled, webauthn_must_initialize = keycloak_client.get_user_mfa_settings(username)
+            otp_enabled, otp_credential_id, otp_must_initialize, webauthn_enabled, webauthn_credential_id, webauthn_must_initialize = keycloak_client.get_user_mfa_settings(username)
             return json_response({
                 "otp": {
                     "enabled": otp_enabled,
-                    "initialization_required": otp_must_initialize
+                    "initialization_required": otp_must_initialize,
+                    "credential_id": otp_credential_id
                 },
                 "webauthn": {
                     "enabled": webauthn_enabled,
-                    "initialization_required": webauthn_must_initialize
+                    "initialization_required": webauthn_must_initialize,
+                    "credential_id": webauthn_credential_id
                 }
             })
         except ResourceNotFoundError as e:

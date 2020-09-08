@@ -1074,30 +1074,33 @@ class KeycloakAPIClient:
                 return True
         return False
 
+    # TODO: only return the credential ID
     def _has_credential(self, credentials, credential_type):
         for credential in credentials:
             if credential["type"] == credential_type:
-                return True
-        return False
+                return True, credential["id"]
+        return False, None
 
     def get_user_mfa_settings(self, username):
         user, credentials = self.get_user_and_mfa_credentials(username)
         otp_must_initialize = (
             self.REQUIRED_ACTION_CONFIGURE_OTP in user["requiredActions"]
         )
-        otp_enabled = otp_must_initialize or self._has_credential(
+        otp_enabled, otp_credential_id = otp_must_initialize or self._has_credential(
             credentials, self.CREDENTIAL_TYPE_OTP
         )
         webauthn_must_initialize = (
             self.REQUIRED_ACTION_WEBAUTHN_REGISTER in user["requiredActions"]
         )
-        webauthn_enabled = webauthn_must_initialize or self._has_credential(
+        webauthn_enabled, webauthn_credential_id = webauthn_must_initialize or self._has_credential(
             credentials, self.CREDENTIAL_TYPE_WEBAUTHN
         )
         return (
             otp_enabled,
+            otp_credential_id,
             otp_must_initialize,
             webauthn_enabled,
+            webauthn_credential_id,
             webauthn_must_initialize,
         )
 
