@@ -374,12 +374,14 @@ class MfaSettings(Resource):
                 "otp": {
                     "enabled": otp_enabled,
                     "initialization_required": otp_must_initialize,
-                    "credential_id": otp_credential_id
+                    "credential_id": otp_credential_id,
+                    "text": "WebAuthn (e.g. Yubikey)"
                 },
                 "webauthn": {
                     "enabled": webauthn_enabled,
                     "initialization_required": webauthn_must_initialize,
-                    "credential_id": webauthn_credential_id
+                    "credential_id": webauthn_credential_id,
+                    "text": "OTP (One Time Password)"
                 }
             })
         except ResourceNotFoundError as e:
@@ -498,3 +500,20 @@ class WebAuthnReset(Resource):
             keycloak_client.disable_webauthn_for_user(username)
         keycloak_client.enable_webauthn_for_user(username)
         return "WebAuthn Enabled and Reset", 200
+
+
+@user_ns.route("/<username>/credential/<credential_id>/setPreferred")
+class SetPreferred(Resource):
+
+    @auth_lib_helper.oidc_validate_multifactor_user_or_api
+    def post(self, username, credential_id):
+        """
+        Update the preferred credential (webauthn or otp)
+        This credential will become the default 2FA login for the user
+        """
+        try:
+            ret = keycloak_client.update_user_preferred_credential_by_id(username, credential_id)
+            if ret.status_code == 204:
+                return json_response(data={"success": "True"})
+        except ResourceNotFoundError as e:
+            return str(e), 500
