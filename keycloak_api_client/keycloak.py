@@ -1097,9 +1097,12 @@ class KeycloakAPIClient:
 
     # TODO: only return the credential ID
     def _has_credential(self, credentials, credential_type):
-        for credential in credentials:
+        for index, credential in enumerate(credentials):
             if credential["type"] == credential_type:
-                return True, credential["id"]
+                # Keycloak always sets the index of preferred login method to '0'.
+                if index == 0:
+                    return True, True, credential["id"]
+                return True, False, credential["id"]
         return False, None
 
     def get_user_mfa_settings(self, username):
@@ -1107,20 +1110,22 @@ class KeycloakAPIClient:
         otp_must_initialize = (
             self.REQUIRED_ACTION_CONFIGURE_OTP in user["requiredActions"]
         )
-        otp_enabled, otp_credential_id = otp_must_initialize or self._has_credential(
+        otp_enabled, otp_preferred, otp_credential_id = otp_must_initialize or self._has_credential(
             credentials, self.CREDENTIAL_TYPE_OTP
         )
         webauthn_must_initialize = (
             self.REQUIRED_ACTION_WEBAUTHN_REGISTER in user["requiredActions"]
         )
-        webauthn_enabled, webauthn_credential_id = webauthn_must_initialize or self._has_credential(
+        webauthn_enabled, webauthn_preferred, webauthn_credential_id = webauthn_must_initialize or self._has_credential(
             credentials, self.CREDENTIAL_TYPE_WEBAUTHN
         )
         return (
             otp_enabled,
+            otp_preferred,
             otp_credential_id,
             otp_must_initialize,
             webauthn_enabled,
+            webauthn_preferred,
             webauthn_credential_id,
             webauthn_must_initialize,
         )

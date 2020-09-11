@@ -87,9 +87,11 @@ class TestUserEndpointsApi(WebTestBase):
         # prepare
         self.keycloak_api_mock.get_user_mfa_settings.return_value = \
         (   True, # enabled (OTP)
+            True, # preferred (OTP)
             '08d8429j-0c2e-486a-8n97-084e7ec7we7d', # credential_id (OTP)
             False, # initialization_required (OTP)
             False, # enabled (WenAuthn)
+            False, # preferred (WenAuthn)
             None, # credential_id (WenAuthn)
             True # initialization_required (WenAuthn)
         )
@@ -100,9 +102,11 @@ class TestUserEndpointsApi(WebTestBase):
         # assert
         self.assertEqual(200, resp.status_code)
         self.assertTrue(resp.json["data"]["otp"]["enabled"])
+        self.assertTrue(resp.json["data"]["otp"]["preferred"])
         self.assertEqual("08d8429j-0c2e-486a-8n97-084e7ec7we7d", resp.json["data"]["otp"]["credential_id"])
         self.assertFalse(resp.json["data"]["otp"]["initialization_required"])
         self.assertFalse(resp.json["data"]["webauthn"]["enabled"])
+        self.assertFalse(resp.json["data"]["webauthn"]["preferred"])
         self.assertTrue(resp.json["data"]["webauthn"]["initialization_required"])
 
     # OTP Settings tests

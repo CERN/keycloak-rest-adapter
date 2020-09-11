@@ -369,16 +369,18 @@ class MfaSettings(Resource):
         Gets all the MFA settings for the user
         """
         try:
-            otp_enabled, otp_credential_id, otp_must_initialize, webauthn_enabled, webauthn_credential_id, webauthn_must_initialize = keycloak_client.get_user_mfa_settings(username)
+            otp_enabled, otp_preferred, otp_credential_id, otp_must_initialize, webauthn_enabled, webauthn_preferred, webauthn_credential_id, webauthn_must_initialize = keycloak_client.get_user_mfa_settings(username)
             return json_response({
                 "otp": {
                     "enabled": otp_enabled,
+                    "preferred": otp_preferred,
                     "initialization_required": otp_must_initialize,
                     "credential_id": otp_credential_id,
                     "text": "WebAuthn (e.g. Yubikey)"
                 },
                 "webauthn": {
                     "enabled": webauthn_enabled,
+                    "preferred": webauthn_preferred,
                     "initialization_required": webauthn_must_initialize,
                     "credential_id": webauthn_credential_id,
                     "text": "OTP (One Time Password)"
