@@ -933,22 +933,23 @@ class KeycloakAPIClient:
         credentials = json.loads(ret.text)
         return user, credentials
 
-    def update_user_preferred_credential_by_id(self, user_id, credential_id):
+    def update_user_preferred_credential_by_id(self, username, credential_id):
         """
         Updates the preferred credential (webauthn or otp)
         This credential will become the default 2FA login for the user
 
-        user_id: user's UUID in Keylcoak
+        username: user's username in Keycloak
         credential_id: UUID of the credential
         """
         headers = self.__get_admin_access_token_headers()
+        user = self.get_user_by_username(username, self.mfa_realm)
         url = "{0}/admin/realms/{1}/users/{2}/credentials/{3}/moveToFirst".format(
-            self.base_url, self.mfa_realm, user_id, credential_id
+            self.base_url, self.mfa_realm, user["id"], credential_id
         )
         ret = self.send_request("post", url, headers=headers)
         self.logger.info(
-            "Updated preferred credential with  ID {0} from user {1}".format(
-                credential_id, user_id
+            "Updated preferred credential with  ID {0} for user {1}".format(
+                credential_id, username
             )
         )
         return ret
