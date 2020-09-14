@@ -517,5 +517,7 @@ class SetPreferred(Resource):
             ret = keycloak_client.update_user_preferred_credential_by_id(username, credential_id)
             if ret.status_code == 204:
                 return json_response(data={"success": "True"})
+            else:
+                return ret.reason, 400
         except ResourceNotFoundError as e:
             return str(e), 500
