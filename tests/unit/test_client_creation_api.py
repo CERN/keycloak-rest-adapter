@@ -32,7 +32,7 @@ class TestClientCreationApi(WebTestBase):
                     "protocolMapper": "oidc-audience-mapper",
                 }
             ],
-            "redirectUris":["ch.cern.app:/dasd", "https://test.cern.ch"],
+            "redirectUris":["ch.cern.app:/dasd", "https://test.cern.ch", "https://127.0.0.1:3000"],
             "webOrigins": ['+'],
             "consentRequired": False,
             "clientId": self.client_id,
@@ -136,7 +136,7 @@ class TestClientCreationApi(WebTestBase):
 
         # act
         resp = self.app_client.post(self._get_endpoint("openid"),
-            data=json.dumps({"clientId": self.client_id, "redirectUris":["ch.cern.app:/dasd", "https://test.cern.ch"]}),
+            data=json.dumps({"clientId": self.client_id, "redirectUris":["ch.cern.app:/dasd", "https://test.cern.ch", "https://127.0.0.1:3000"]}),
             content_type='application/json')
 
         # assert

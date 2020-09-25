@@ -55,4 +55,4 @@ AUTH_USER_ACTIONS_ROLE = "user"
 AUTH_USER_ACTIONS_MFA_ROLE = "user_mfa"
 
 # Non-consent domains (i.e. CERN & Localhost)
-NON_CONSENT_DOMAINS_REGEX = "(cern\.ch$|\.cern$|localhost$)"
+NON_CONSENT_DOMAINS_REGEX = "(cern\.ch$|\.cern$|localhost$|127.0.0.1$)"
