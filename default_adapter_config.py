@@ -35,10 +35,23 @@ CLIENT_DEFAULTS = {
         "protocolMappers": [],
         "webOrigins": ["+"],
         "consentRequired": False,
+        "defaultClientScopes": [
+            "cern-login-info",
+            "profile",
+            "email",
+            "authz-roles",
+            "web-origins"
+        ]
     },
     "saml": {
         "protocolMappers": [],
-        "consentRequired": False
+        "consentRequired": False,
+        "defaultClientScopes": [
+            "saml-cern-login-info",
+            "saml-cern-profile",
+            "saml-email",
+            "saml-roles"
+        ]
     }
 }
 

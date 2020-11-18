@@ -16,7 +16,7 @@ token_resp = requests.post(
         "grant_type": "client_credentials",
         "client_id": "authorization-service-api",
         # MAKE SURE THE SECRET IS DELETED
-        "client_secret": "<DELETED>",
+        "client_secret": "DELETED",
         "audience": "keycloak-rest-adapter"
     },
     headers={"Content-Type": "application/x-www-form-urlencoded"},
@@ -30,10 +30,9 @@ f = open(args[0])
 
 resp = requests.post(
     endpoint,
-    data={
+    json={
         "definition": f.read(),
-        "consentRequired": "True",
-        #"defaultClientScopes": ["test-hannah"]
+        "defaultClientScopes": ["saml-udemy"]
     },
     headers={"Authorization": "Bearer {}".format(token)},
 )

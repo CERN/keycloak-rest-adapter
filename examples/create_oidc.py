@@ -10,7 +10,7 @@ token_resp = requests.post(
         "grant_type": "client_credentials",
         "client_id": "authorization-service-api",
         # MAKE SURE THE SECRET IS DELETED
-        "client_secret": "<DELETED>",
+        "client_secret": "DELETED",
         "audience": "keycloak-rest-adapter"
     },
     headers={"Content-Type": "application/x-www-form-urlencoded"},
@@ -22,9 +22,10 @@ endpoint = "http://localhost:5000/api/v1.0/client/openid"
 
 resp = requests.post(
     endpoint,
-    data={
-        "clientId": "test-hannah-33",
-        "consentRequired": "True"
+    json={
+        "clientId": "test-hannah-93",
+        "consentRequired": "True",
+        "defaultClientScopes":["testhannah"]
     },
     headers={"Authorization": "Bearer {}".format(token)},
 )

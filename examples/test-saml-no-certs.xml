@@ -2,7 +2,7 @@
 <md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
                      validUntil="2020-06-19T07:48:27Z"
                      cacheDuration="PT604800S"
-                     entityID="test-hannah-8">
+                     entityID="test-hannah-23">
     <md:SPSSODescriptor AuthnRequestsSigned="false" WantAssertionsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
         <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
                                 Location="https://test-hannah.cern.ch" />

@@ -36,7 +36,8 @@ class TestClientCreationApi(WebTestBase):
             "webOrigins": ['+'],
             "consentRequired": False,
             "clientId": self.client_id,
-            "protocol": 'openid'
+            "protocol": 'openid',
+            "defaultClientScopes": ['cern-login-info', 'profile', 'email', 'authz-roles', 'web-origins']
         }
 
     def _mock_oidc_call_consent_required(self):
@@ -57,7 +58,8 @@ class TestClientCreationApi(WebTestBase):
             "webOrigins": ['+'],
             "consentRequired": True,
             "clientId": self.client_id,
-            "protocol": 'openid'
+            "protocol": 'openid',
+            "defaultClientScopes": ['cern-login-info', 'profile', 'email', 'authz-roles', 'web-origins'],
         }
 
     def test_create_invalid_protocol(self):
@@ -169,7 +171,13 @@ class TestClientCreationApi(WebTestBase):
     def test_create_saml_good_xml(self):
         # prepare
         mock_creation = {"clientId": self.client_id}
-        creation_call_expected = {"clientId": self.client_id, "protocolMappers": [], "protocol": "saml", "consentRequired": False}
+        creation_call_expected = {
+            "clientId": self.client_id,
+            "protocolMappers": [],
+            "protocol": "saml",
+            "consentRequired": False,
+            "defaultClientScopes": ['saml-cern-login-info', 'saml-cern-profile', 'saml-email', 'saml-roles']
+            }
         xml_payload = "<clientId>value</clientId>"
         self.keycloak_api_mock.client_description_converter.return_value = {"clientId": self.client_id}
         self.keycloak_api_mock.create_new_client.return_value = mock_creation

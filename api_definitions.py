@@ -207,38 +207,52 @@ class CommonCreator(Resource):
         # No external redirect found
         return False
 
+    def _merge_request_and_defaults(self, data, defaults):
+        """ Merges the incoming data on top of the defaults, if the object is
+        a list the request object will be appended, otherwise overwritten
+        """
+        output = deepcopy(defaults)
+        for k in data:
+            if k in output and isinstance(data[k], list):
+                output[k].extend(data[k])
+            else:
+                output[k] = data[k]
+        return output
+
     def common_create(self, data):
         """
         Common create method for all the endpoints
         """
-        protocol = data["protocol"]
-        selected_protocol_id = deepcopy(self.auth_protocols[protocol])
 
-        if selected_protocol_id in data:
-            if is_xml(data[selected_protocol_id]):
-                # if data looks like XML use the client description converter to create client
+        protocol = data["protocol"]
+        selected_protocol_definition_key = deepcopy(self.auth_protocols[protocol])
+
+        if selected_protocol_definition_key in data:
+            if is_xml(data[selected_protocol_definition_key]):
+                # If data looks like XML then this is SAML, use the client description converter to create client
                 client_description = keycloak_client.client_description_converter(
-                    data[selected_protocol_id]
+                    data[selected_protocol_definition_key]
                 )
+                data.pop(selected_protocol_definition_key)
+
                 # AuthnRequestsSigned attribute is not being correctly parsed by keycloak
                 # If there is no signing certificate, set the clientCertificateRequired attribute to False
-                if client_description.get('attributes') and client_description['attributes'].get('saml.signing.certificate') == None :
+                if client_description.get('attributes') and client_description['attributes'].get('saml.signing.certificate') is None:
                     client_description['attributes']['saml.client.signature'] = "false"
 
-                # Copy in the default parameters and update them with the ones we received
-                saml_params = deepcopy(self.protocol_mappers[protocol])
-                # Copy in all incoming data, except the initial definition that has already been converted
-                saml_params.update({k:v for k,v in data.items() if k not in [ selected_protocol_id ]})
+                # Merge incoming data with defaults
+                saml_params = self._merge_request_and_defaults(data, self.protocol_mappers[protocol])
+                # Add parsed client description
                 saml_params.update(client_description)
 
                 # If the redirect URI is not .cern or a .cern.ch, enable consent
                 if client_description.get('redirectUris') and self._redirects_outside_cern(client_description["redirectUris"]):
-                    saml_params["consentRequired"] = True;
+                    saml_params["consentRequired"] = True
 
                 new_client = keycloak_client.create_new_client(**saml_params)
+
             elif protocol == "openid":
-                client_params = deepcopy(self.protocol_mappers[protocol])
-                client_params.update(data)
+                client_params = self._merge_request_and_defaults(data, self.protocol_mappers[protocol])
 
                 # Include the audience mapper by default
                 if "protocolMappers" not in client_params:
@@ -257,7 +271,7 @@ class CommonCreator(Resource):
         else:
             return json_response(
                 "The request is missing '{}'. It must be passed as a query parameter".format(
-                    selected_protocol_id
+                    selected_protocol_definition_key
                 ),
                 400,
             )
