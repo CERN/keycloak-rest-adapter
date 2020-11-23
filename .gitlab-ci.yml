@@ -62,15 +62,6 @@ flake8:
     - python -m flake8 *.py keycloak_api_client
   allow_failure: true
 
-pylint:
-  image: python:3.8-alpine
-  stage: lint
-  before_script:
-    - pip install -r dev-requirements.txt
-  script:
-    - python -m pylint *.py keycloak_api_client
-  allow_failure: true
-
 ### Testing
 test:
   stage: test

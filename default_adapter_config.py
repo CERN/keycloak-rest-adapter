@@ -40,8 +40,8 @@ CLIENT_DEFAULTS = {
             "profile",
             "email",
             "authz-roles",
-            "web-origins"
-        ]
+            "web-origins",
+        ],
     },
     "saml": {
         "protocolMappers": [],
@@ -50,16 +50,13 @@ CLIENT_DEFAULTS = {
             "saml-cern-login-info",
             "saml-cern-profile",
             "saml-email",
-            "saml-roles"
-        ]
-    }
+            "saml-roles",
+        ],
+    },
 }
 
 # Authentication protocols
-AUTH_PROTOCOLS = {
-    "saml": "definition",
-    "openid": "clientId"
-}
+AUTH_PROTOCOLS = {"saml": "definition", "openid": "clientId"}
 
 # Auth configs
 AUTH_AUTHORIZED_APPS = ["authorization-service-api"]
@@ -68,4 +65,4 @@ AUTH_USER_ACTIONS_ROLE = "user"
 AUTH_USER_ACTIONS_MFA_ROLE = "user_mfa"
 
 # Non-consent domains (i.e. CERN & Localhost)
-NON_CONSENT_DOMAINS_REGEX = "(cern\.ch$|\.cern$|localhost$|127.0.0.1$)"
+NON_CONSENT_DOMAINS_REGEX = r"(cern\.ch$|\.cern$|localhost$|127.0.0.1$)"

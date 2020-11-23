@@ -7,7 +7,7 @@ JSON_MIME_TYPE = "application/json"
 
 
 def get_supported_protocols() -> Dict[str, str]:
-    return current_app.config['AUTH_PROTOCOLS']
+    return current_app.config["AUTH_PROTOCOLS"]
 
 
 def json_response(data="", status=200, headers=None):

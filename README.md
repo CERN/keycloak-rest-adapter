@@ -24,7 +24,7 @@ Now configure OIDC for the REST Adapter. Register `keycloak-rest-adapter` again 
 
 Modify `default_adapter_config.py` to contain your configuration, notably:
 ```
-# Keycloak server 
+# Keycloak server
 KEYCLOAK_SERVER = "https://keycloak-dev.cern.ch"
 # The realm on which the rest adapter operates
 KEYCLOAK_REALM = "cern"

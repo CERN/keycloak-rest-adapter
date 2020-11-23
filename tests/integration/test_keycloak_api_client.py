@@ -2,8 +2,10 @@ import os
 import unittest
 
 from keycloak_api_client.keycloak import KeycloakAPIClient
-from tests.utils.keycloak_docker_tools import (create_keycloak_docker,
-                                               tear_down_keycloak_docker)
+from tests.utils.keycloak_docker_tools import (
+    create_keycloak_docker,
+    tear_down_keycloak_docker,
+)
 from tests.utils.tools import in_ci_job, run_integration_tests
 
 SAML_ENTITY_ID = "http://cristi-nuc.cern.ch:5000/saml/metadata/"
@@ -24,11 +26,14 @@ OIDC_CLIENT_ID = "test-potato"
 TEARDOWN = bool(os.getenv("TEARDOWN_CONTAINER", ""))
 
 
-@unittest.skipUnless(run_integration_tests(), "Skipped: RUN_INTEGRATION env variable was not set")
+@unittest.skipUnless(
+    run_integration_tests(), "Skipped: RUN_INTEGRATION env variable was not set"
+)
 class TestKeycloakApiClient(unittest.TestCase):
     """
     Integration tests against the Keycloak API
     """
+
     server = "http://localhost:8081"
 
     @classmethod
@@ -48,6 +53,7 @@ class TestKeycloakApiClient(unittest.TestCase):
                 "KEYCLOAK_CLIENT_ID": "keycloak-rest-adapter",
                 "KEYCLOAK_CLIENT_SECRET": "42ac0602-a08e-49f7-9b92-44afd622d29c",
             }
+
         self.client.init_app(_app)
         self.client.delete_client_by_client_id(OIDC_CLIENT_ID)
         self.client.delete_client_by_client_id(SAML_ENTITY_ID)
@@ -129,13 +135,13 @@ class TestKeycloakApiClient(unittest.TestCase):
         )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
-        # act 
+        # act
         response = self.client.get_client_by_client_id(OIDC_CLIENT_ID)
         self.assertIsNotNone(response)
-        self.assertEqual(response['id'], created['id'])
+        self.assertEqual(response["id"], created["id"])
 
     def test_get_client_by_client_id_not_found(self):
-        # act 
+        # act
         response = self.client.get_client_by_client_id(OIDC_CLIENT_ID)
         self.assertFalse(response)
 
@@ -148,7 +154,9 @@ class TestKeycloakApiClient(unittest.TestCase):
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
         # act
-        created = self.client.create_client_policy(created["id"], "test-policy", "some policy")
+        created = self.client.create_client_policy(
+            created["id"], "test-policy", "some policy"
+        )
         self.assertEqual(200, created.status_code)
 
     def test_get_auth_permission_by_name(self):
@@ -169,14 +177,14 @@ class TestKeycloakApiClient(unittest.TestCase):
         # act
         resp = self.client.get_all_clients()
         self.assertTrue(len(resp) > 0)
-        self.assertTrue(any(r['clientId'] == OIDC_CLIENT_ID for r in resp))
+        self.assertTrue(any(r["clientId"] == OIDC_CLIENT_ID for r in resp))
 
     def test_get_user_by_username(self):
         # prepare
         try:
             existing = self.client.get_user_by_username("test-user")
             self.client.delete_user(existing["id"])
-        except:
+        except Exception:
             pass
         # act
         response = self.client.create_user("test-user")
@@ -192,14 +200,16 @@ class TestKeycloakApiClient(unittest.TestCase):
         try:
             existing = self.client.get_user_by_username("test-user")
             self.client.delete_user(existing["id"])
-        except:
+        except Exception:
             pass
 
         response = self.client.create_user("test-user")
         self.assertEqual(201, response.status_code)
 
         # act
-        ret = self.client.update_user_properties("test-user", self.client.realm, **{"enabled":  True})
+        ret = self.client.update_user_properties(
+            "test-user", self.client.realm, **{"enabled": True}
+        )
 
         self.assertIsNotNone(ret)
         # import ipdb; ipdb.set_trace()

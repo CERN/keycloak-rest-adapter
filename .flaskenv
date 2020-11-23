@@ -1,3 +1,3 @@
 KEYCLOAK_REST_ADAPTER_CONFIG=test_adapter_config.py
 FLASK_APP=wsgi.py
-FLASK_DEBUG=1 
+FLASK_DEBUG=1

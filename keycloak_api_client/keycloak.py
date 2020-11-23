@@ -24,19 +24,21 @@ class KeycloakAPIClient:
         Initialize the adapter based on the app config
         """
         self._initialize(
-            app.config['KEYCLOAK_SERVER'],
-            app.config['KEYCLOAK_REALM'],
-            app.config['KEYCLOAK_CLIENT_ID'],
-            app.config['KEYCLOAK_CLIENT_SECRET']
+            app.config["KEYCLOAK_SERVER"],
+            app.config["KEYCLOAK_REALM"],
+            app.config["KEYCLOAK_CLIENT_ID"],
+            app.config["KEYCLOAK_CLIENT_SECRET"],
         )
 
-    def _initialize(self,
-            server,
-            realm,
-            client_id,
-            client_secret,
-            master_realm="master",
-            mfa_realm="mfa",):
+    def _initialize(
+        self,
+        server,
+        realm,
+        client_id,
+        client_secret,
+        master_realm="master",
+        mfa_realm="mfa",
+    ):
         """
         Initialize the class with the params needed to use the API.
         server: keycloak server: ex. https://keycloak-server.cern.ch
@@ -431,7 +433,7 @@ class KeycloakAPIClient:
         # keycloak returns a list of all matching policies
         matching_policies = json.loads(ret.text)
         if isinstance(matching_policies, dict):
-            if 'error' in matching_policies:
+            if "error" in matching_policies:
                 return []
         # return exact match
         return [policy for policy in matching_policies if policy["name"] == policy_name]
@@ -769,9 +771,7 @@ class KeycloakAPIClient:
             "Authorization": "Bearer {0}".format(access_token),
         }
         url = "{0}/admin/realms/{1}/clients".format(self.base_url, self.realm)
-        self.logger.info(
-            "Creating client '%s' --> %s", kwargs["clientId"], kwargs
-        )
+        self.logger.info("Creating client '%s' --> %s", kwargs["clientId"], kwargs)
         return self.send_request("post", url, headers=headers, json=kwargs)
 
     def logout_user(self, user_id):
@@ -1008,12 +1008,12 @@ class KeycloakAPIClient:
         if not realm:
             realm = self.realm
         headers = self.__get_admin_access_token_headers()
-        url = "{0}/admin/realms/{1}/users".format(
-            self.base_url, realm
-        )
+        url = "{0}/admin/realms/{1}/users".format(self.base_url, realm)
 
         user_data = {"username": username}
-        ret = self.send_request("post", url, data=json.dumps(user_data), headers=headers)
+        ret = self.send_request(
+            "post", url, data=json.dumps(user_data), headers=headers
+        )
         return ret
 
     def delete_user(self, user_id, realm=None):
@@ -1024,9 +1024,7 @@ class KeycloakAPIClient:
         if not realm:
             realm = self.realm
         headers = self.__get_admin_access_token_headers()
-        url = "{0}/admin/realms/{1}/users/{2}".format(
-            self.base_url, realm, user_id
-        )
+        url = "{0}/admin/realms/{1}/users/{2}".format(self.base_url, realm, user_id)
 
         ret = self.send_request("delete", url, headers=headers)
         return ret

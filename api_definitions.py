@@ -8,14 +8,20 @@ from flask_restx import Resource, fields, Api
 
 from auth import auth_lib_helper
 from keycloak_api_client.keycloak import keycloak_client
-from utils import (ResourceNotFoundError, get_request_data, is_xml,
-                   json_response, validate_protocol, validate_protocol_data)
+from utils import (
+    ResourceNotFoundError,
+    get_request_data,
+    is_xml,
+    json_response,
+    validate_protocol,
+    validate_protocol_data,
+)
 
 
 api = Api(
     title="Keycloak Rest Adapter API",
     description="A simple Keycloak adapter for handling clients",
-    security={'oauth2': ['api']},
+    security={"oauth2": ["api"]},
     doc="/swagger-ui",
 )
 
@@ -88,7 +94,7 @@ class TokenExchangePermissions(Resource):
             return ret.reason, 400
 
     def __verify_clients(
-            self, target_client, requestor_client, target_client_name, requestor_client_name
+        self, target_client, requestor_client, target_client_name, requestor_client_name
     ):
         if target_client and requestor_client:
             return False
@@ -103,10 +109,9 @@ class TokenExchangePermissions(Resource):
 
 @ns.route("/<protocol>/<path:client_id>")
 class ClientDetails(Resource):
-
     def __init__(self, *args, **kwargs):
         super(ClientDetails, self).__init__(*args, **kwargs)
-        self.auth_protocols = api.app.config['AUTH_PROTOCOLS']
+        self.auth_protocols = api.app.config["AUTH_PROTOCOLS"]
 
     @ns.doc(body=model)
     @auth_lib_helper.oidc_validate_api
@@ -171,8 +176,8 @@ class ManageClientSecret(Resource):
 class CommonCreator(Resource):
     def __init__(self, *args, **kwargs):
         super(CommonCreator, self).__init__(*args, **kwargs)
-        self.protocol_mappers = current_app.config['CLIENT_DEFAULTS']
-        self.auth_protocols = current_app.config['AUTH_PROTOCOLS']
+        self.protocol_mappers = current_app.config["CLIENT_DEFAULTS"]
+        self.auth_protocols = current_app.config["AUTH_PROTOCOLS"]
 
     def _create_oidc_protocol_mapper(self, data):
         """
@@ -194,7 +199,7 @@ class CommonCreator(Resource):
         CERN or localhost. In this case, assume that the CERN or localhost
         redirects are used for testing within CERN.
         """
-        p = re.compile(api.app.config['NON_CONSENT_DOMAINS_REGEX'],)
+        p = re.compile(api.app.config["NON_CONSENT_DOMAINS_REGEX"])
         for redirect in redirects:
             try:
                 hostname = urlparse(redirect).hostname
@@ -237,30 +242,44 @@ class CommonCreator(Resource):
 
                 # AuthnRequestsSigned attribute is not being correctly parsed by keycloak
                 # If there is no signing certificate, set the clientCertificateRequired attribute to False
-                if client_description.get('attributes') and client_description['attributes'].get('saml.signing.certificate') is None:
-                    client_description['attributes']['saml.client.signature'] = "false"
+                if (
+                    client_description.get("attributes")
+                    and client_description["attributes"].get("saml.signing.certificate")
+                    is None
+                ):
+                    client_description["attributes"]["saml.client.signature"] = "false"
 
                 # Merge incoming data with defaults
-                saml_params = self._merge_request_and_defaults(data, self.protocol_mappers[protocol])
+                saml_params = self._merge_request_and_defaults(
+                    data, self.protocol_mappers[protocol]
+                )
                 # Add parsed client description
                 saml_params.update(client_description)
 
                 # If the redirect URI is not .cern or a .cern.ch, enable consent
-                if client_description.get('redirectUris') and self._redirects_outside_cern(client_description["redirectUris"]):
+                if client_description.get(
+                    "redirectUris"
+                ) and self._redirects_outside_cern(client_description["redirectUris"]):
                     saml_params["consentRequired"] = True
 
                 new_client = keycloak_client.create_new_client(**saml_params)
 
             elif protocol == "openid":
-                client_params = self._merge_request_and_defaults(data, self.protocol_mappers[protocol])
+                client_params = self._merge_request_and_defaults(
+                    data, self.protocol_mappers[protocol]
+                )
 
                 # Include the audience mapper by default
                 if "protocolMappers" not in client_params:
                     client_params["protocolMappers"] = {}
-                client_params["protocolMappers"].append(self._create_oidc_protocol_mapper(data))
+                client_params["protocolMappers"].append(
+                    self._create_oidc_protocol_mapper(data)
+                )
 
                 # If the redirect URI is not .cern or a .cern.ch, enable consent
-                if client_params.get('redirectUris') and self._redirects_outside_cern(client_params["redirectUris"]):
+                if client_params.get("redirectUris") and self._redirects_outside_cern(
+                    client_params["redirectUris"]
+                ):
                     client_params["consentRequired"] = True
 
                 new_client = keycloak_client.create_new_client(**client_params)
@@ -344,6 +363,7 @@ class UserDetails(Resource):
                 400,
             )
 
+
 #
 # Routes for MFA settings
 #
@@ -359,9 +379,8 @@ def is_otp_enabled(client, username):
     Check if OTP is enabled for the user
     """
     return client.is_credential_enabled_for_user(
-        username,
-        client.REQUIRED_ACTION_CONFIGURE_OTP,
-        client.CREDENTIAL_TYPE_OTP)
+        username, client.REQUIRED_ACTION_CONFIGURE_OTP, client.CREDENTIAL_TYPE_OTP
+    )
 
 
 def is_webauthn_enabled(client, username):
@@ -371,42 +390,45 @@ def is_webauthn_enabled(client, username):
     return client.is_credential_enabled_for_user(
         username,
         client.REQUIRED_ACTION_WEBAUTHN_REGISTER,
-        client.CREDENTIAL_TYPE_WEBAUTHN)
+        client.CREDENTIAL_TYPE_WEBAUTHN,
+    )
 
 
 @user_ns.route("/<username>/authenticator")
 class MfaSettings(Resource):
-
     @auth_lib_helper.oidc_validate_user_or_api
     def get(self, username):
         """
         Gets all the MFA settings for the user
         """
         try:
-            otp_enabled, otp_preferred, otp_credential_id, otp_must_initialize, webauthn_enabled, webauthn_preferred, webauthn_credential_id, webauthn_must_initialize = keycloak_client.get_user_mfa_settings(username)
-            return json_response({
-                "otp": {
-                    "enabled": otp_enabled,
-                    "preferred": otp_preferred,
-                    "initialization_required": otp_must_initialize,
-                    "credential_id": otp_credential_id,
-                    "text": "WebAuthn (e.g. Yubikey)"
-                },
-                "webauthn": {
-                    "enabled": webauthn_enabled,
-                    "preferred": webauthn_preferred,
-                    "initialization_required": webauthn_must_initialize,
-                    "credential_id": webauthn_credential_id,
-                    "text": "OTP (One Time Password)"
+            otp_enabled, otp_preferred, otp_credential_id, otp_must_initialize, webauthn_enabled, webauthn_preferred, webauthn_credential_id, webauthn_must_initialize = keycloak_client.get_user_mfa_settings(
+                username
+            )
+            return json_response(
+                {
+                    "otp": {
+                        "enabled": otp_enabled,
+                        "preferred": otp_preferred,
+                        "initialization_required": otp_must_initialize,
+                        "credential_id": otp_credential_id,
+                        "text": "WebAuthn (e.g. Yubikey)",
+                    },
+                    "webauthn": {
+                        "enabled": webauthn_enabled,
+                        "preferred": webauthn_preferred,
+                        "initialization_required": webauthn_must_initialize,
+                        "credential_id": webauthn_credential_id,
+                        "text": "OTP (One Time Password)",
+                    },
                 }
-            })
+            )
         except ResourceNotFoundError as e:
             return str(e), 404
 
 
 @user_ns.route("/<username>/authenticator/otp")
 class OTP(Resource):
-
     @auth_lib_helper.oidc_validate_user_or_api
     def get(self, username):
         """Gets status of OTP credentials for a user"""
@@ -441,14 +463,16 @@ class OTP(Resource):
         if not otp_enabled:
             return "OTP already disabled", 200
         if not webauthn_enabled:
-            return "Cannot disable OTP if WebAuthn is not enabled. At least one MFA method must always be enabled for the user.", 403
+            return (
+                "Cannot disable OTP if WebAuthn is not enabled. At least one MFA method must always be enabled for the user.",
+                403,
+            )
         keycloak_client.disable_otp_for_user(username)
         return "OTP Disabled", 200
 
 
 @user_ns.route("/<username>/authenticator/otp/reset")
 class OTPReset(Resource):
-
     @auth_lib_helper.oidc_validate_multifactor_user_or_api
     def post(self, username):
         """Enables and resets OTP credentials for a user"""
@@ -497,14 +521,16 @@ class WebAuthn(Resource):
         if not webauthn_enabled:
             return "WebAuthn already disabled", 200
         if not otp_enabled:
-            return "Cannot disable WebAuthn if OTP is not enabled. At least one MFA method must always be enabled for the user.", 403
+            return (
+                "Cannot disable WebAuthn if OTP is not enabled. At least one MFA method must always be enabled for the user.",
+                403,
+            )
         keycloak_client.disable_webauthn_for_user(username)
         return "WebAuthn Disabled", 200
 
 
 @user_ns.route("/<username>/authenticator/webauthn/reset")
 class WebAuthnReset(Resource):
-
     @auth_lib_helper.oidc_validate_multifactor_user_or_api
     def post(self, username):
         """Enables and resets WebAuthn credentials for a user"""
@@ -520,7 +546,6 @@ class WebAuthnReset(Resource):
 
 @user_ns.route("/<username>/credential/<credential_id>/setPreferred")
 class SetPreferred(Resource):
-
     @auth_lib_helper.oidc_validate_multifactor_user_or_api
     def post(self, username, credential_id):
         """
@@ -528,7 +553,9 @@ class SetPreferred(Resource):
         This credential will become the default 2FA login for the user
         """
         try:
-            ret = keycloak_client.update_user_preferred_credential_by_id(username, credential_id)
+            ret = keycloak_client.update_user_preferred_credential_by_id(
+                username, credential_id
+            )
             if ret.status_code == 204:
                 return json_response(data={"success": "True"})
             else:

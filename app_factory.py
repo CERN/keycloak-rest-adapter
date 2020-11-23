@@ -8,7 +8,7 @@ from keycloak_api_client.keycloak import keycloak_client
 from log_utils import configure_logging
 from flask import Blueprint
 
-index_bp = Blueprint('index', __name__)
+index_bp = Blueprint("index", __name__)
 
 
 @index_bp.route("/")
@@ -18,13 +18,15 @@ def index():
 
 def configure_keycloak_dependent_variables(app: Flask) -> None:
     keycloak_server = app.config["KEYCLOAK_SERVER"]
-    api_version = app.config['API_VERSION']
+    api_version = app.config["API_VERSION"]
     realm = app.config["OIDC_REALM"]
     authorizations = app.config["OAUTH_AUTHORIZATIONS"]
-    authorizations["oauth2"].update({
-        "tokenUrl": f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/token",
-        "authorizationUrl": f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/auth"
-    })
+    authorizations["oauth2"].update(
+        {
+            "tokenUrl": f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/token",
+            "authorizationUrl": f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/auth",
+        }
+    )
     app.config.update(
         OAUTH_AUTHORIZATIONS=authorizations,
         # Configuration URL for all the keys of the Keycloak server
@@ -32,7 +34,7 @@ def configure_keycloak_dependent_variables(app: Flask) -> None:
         # The 'iss' field in the token should match this
         OIDC_ISSUER=f"{keycloak_server}/auth/realms/{realm}",
         OAUTH_AUTH_URL=f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/auth",
-        API_URL_PREFIX="/api/{}".format(api_version)
+        API_URL_PREFIX="/api/{}".format(api_version),
     )
 
 
@@ -61,9 +63,9 @@ def setup_api(app: Flask):
     """
     Sets up the flast-restx API
     """
-    api.authorizations = app.config['OAUTH_AUTHORIZATIONS']
-    api.version = app.config['API_VERSION']
-    api.prefix = app.config['API_URL_PREFIX']
+    api.authorizations = app.config["OAUTH_AUTHORIZATIONS"]
+    api.version = app.config["API_VERSION"]
+    api.prefix = app.config["API_URL_PREFIX"]
     api.init_app(app)
 
 
@@ -81,9 +83,10 @@ def create_app() -> Flask:
     configure_keycloak_client(app)
     configure_authlib_helper(app)
 
-    if app.config.get('OAUTH_AUTH_URL', None):
-        app.config['OAUTH_AUTHORIZATIONS']['oauth2'][
-            'authorizationUrl'] = app.config['OAUTH_AUTH_URL']
+    if app.config.get("OAUTH_AUTH_URL", None):
+        app.config["OAUTH_AUTHORIZATIONS"]["oauth2"]["authorizationUrl"] = app.config[
+            "OAUTH_AUTH_URL"
+        ]
 
     setup_api(app)
 
