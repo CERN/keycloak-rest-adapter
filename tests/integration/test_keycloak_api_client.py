@@ -22,6 +22,8 @@ SAML_DESCRIPTOR = f"""
 """
 
 OIDC_CLIENT_ID = "test-potato"
+# address scope is inbuilt in Keycloak
+OIDC_CLIENT_TEST_SCOPE = "address"
 
 TEARDOWN = bool(os.getenv("TEARDOWN_CONTAINER", ""))
 
@@ -216,6 +218,25 @@ class TestKeycloakApiClient(unittest.TestCase):
         self.assertEqual(True, ret["enabled"])
         response = self.client.delete_user(ret["id"])
         self.assertEqual(204, response.status_code)
+
+    def test_get_scopes(self):
+        # act
+        response = self.client.get_scopes()
+        self.assertIsNotNone(response)
+
+    def test_get_client_scopes(self):
+        # prepare
+        created = self.client.create_new_openid_client(
+            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
+        )
+        self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
+
+        # act
+        response = self.client.get_client_default_scopes(OIDC_CLIENT_ID)
+
+        # assert
+        self.assertIsNotNone(response)
+        self.assertTrue(len(response) > 0)
 
     @classmethod
     def tearDownClass(cls):

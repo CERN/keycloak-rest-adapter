@@ -107,6 +107,69 @@ class TokenExchangePermissions(Resource):
             )
 
 
+@ns.route("/scopes")
+class Scopes(Resource):
+    @auth_lib_helper.oidc_validate_api
+    def get(self):
+        """Get all client scopes for the realm"""
+        ret = keycloak_client.get_scopes()
+        if ret:
+            return ret, 200
+        else:
+            return json_response(
+                "Cannot get scopes", 400
+            )
+
+
+@ns.route("/<path:client_id>/default-scopes")
+class DefaultClientScopes(Resource):
+    @auth_lib_helper.oidc_validate_api
+    def get(self, client_id):
+        """Get the default scopes for a client"""
+        ret = keycloak_client.get_client_default_scopes(client_id)
+        if ret:
+            return ret, 200
+        else:
+            return json_response(
+                f"Cannot get '{client_id}' scopes. Check if client exists",
+                400,
+            )
+
+
+@ns.route("/<path:client_id>/default-scopes/<path:scope_id>")
+class ManageDefaultClientScopes(Resource):
+    @auth_lib_helper.oidc_validate_api
+    def put(self, client_id, scope_id):
+        """Add a default client scope to a client"""
+        ret = keycloak_client.add_client_scope(client_id, scope_id)
+        if ret:
+            return json_response(
+                f"Scope '{scope_id}' added to Client '{client_id}' successfully",
+                200
+            )
+        else:
+            return json_response(
+                f"Cannot add Scope '{scope_id}' to Client '{client_id}'. Check if client and scope exist",
+                400,
+            )
+
+
+    @auth_lib_helper.oidc_validate_api
+    def delete(self, client_id, scope_id):
+        """Delete a default client scope from a client"""
+        ret = keycloak_client.delete_client_scope(client_id, scope_id)
+        if ret:
+            return json_response(
+                f"Scope '{scope_id}' deleted from Client '{client_id}' successfully",
+                200
+            )
+        else:
+            return json_response(
+                f"Cannot delete Scope '{scope_id} from Client '{client_id}'. Check if client and scope exist",
+                400,
+            )
+
+
 @ns.route("/<protocol>/<path:client_id>")
 class ClientDetails(Resource):
     def __init__(self, *args, **kwargs):

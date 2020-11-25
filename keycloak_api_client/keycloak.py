@@ -262,6 +262,73 @@ class KeycloakAPIClient:
             )
             return
 
+    def get_scopes(self):
+        """
+        Get scopes
+        Returns: List of all scopes in the realm
+        """
+        headers = self.__get_admin_access_token_headers()
+        self.logger.info(f"Getting all scopes for Realm '{self.realm}'")
+        url = f"{self.base_url}/admin/realms/{self.realm}/client-scopes"
+        response = self.send_request(
+            "get", url, headers=headers
+        )
+        return response.json()
+
+    def get_client_default_scopes(self, client_id):
+        """
+        Get the Client's default scopes
+        Returns: List of default scopes for the client
+        """
+        headers = self.__get_admin_access_token_headers()
+        client_object = self.get_client_by_client_id(client_id)
+        self.logger.info(f"Getting the scopes for client '{client_id}'")
+        if client_object:
+            url = f"{self.base_url}/admin/realms/{self.realm}/clients/{client_object['id']}/default-client-scopes"
+            response = self.send_request(
+                "get", url, headers=headers
+            )
+            return response.json()
+        else:
+            self.logger.info(f"Cannot update client '{client_id}' mappers. Client not found")
+            return
+
+    def add_client_scope(self, client_id, scope_id):
+        """
+        Add a scope to a client
+        """
+        headers = self.__get_admin_access_token_headers()
+        client_object = self.get_client_by_client_id(client_id)
+        self.logger.info(f"Adding Scope '{scope_id}' to client '{client_id}'")
+        if client_object:
+            url = f"{self.base_url}/admin/realms/{self.realm}/clients/{client_object['id']}/default-client-scopes/{scope_id}"
+            return self.send_request(
+                "put",
+                url,
+                headers=headers
+            )
+        else:
+            self.logger.info(f"Cannot add Scope '{scope_id}' to Client '{client_id}'. Client not found")
+            return
+
+    def delete_client_scope(self, client_id, scope_id):
+        """
+        Add a scope to a client
+        """
+        headers = self.__get_admin_access_token_headers()
+        client_object = self.get_client_by_client_id(client_id)
+        self.logger.info(f"Deleting Scope '{scope_id}' from Client '{client_id}'")
+        if client_object:
+            url = f"{self.base_url}/admin/realms/{self.realm}/clients/{client_object['id']}/default-client-scopes/{3}"
+            return self.send_request(
+                "delete",
+                url,
+                headers=headers
+            )
+        else:
+            self.logger.info(f"Cannot delete Scope '{scope_id}' from Client '{client_id}'. Client not found")
+            return
+
     def update_client_properties(self, client_id, **kwargs):
         """
         Update existing client properties

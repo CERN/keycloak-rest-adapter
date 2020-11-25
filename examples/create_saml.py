@@ -30,7 +30,10 @@ f = open(args[0])
 
 resp = requests.post(
     endpoint,
-    json={"definition": f.read(), "defaultClientScopes": ["saml-udemy"]},
+    json={
+        "definition": f.read(),
+        "defaultClientScopes": ["saml-udemy"]
+    },
     headers={"Authorization": "Bearer {}".format(token)},
 )
 print("Status: {}".format(resp.status_code))
