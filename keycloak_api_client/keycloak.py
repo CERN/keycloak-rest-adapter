@@ -290,7 +290,7 @@ class KeycloakAPIClient:
             )
             return response.json()
         else:
-            self.logger.info(f"Cannot update client '{client_id}' mappers. Client not found")
+            self.logger.info(f"Cannot get scopes for Client '{client_id}'. Client not found")
             return
 
     def add_client_scope(self, client_id, scope_id):
@@ -319,7 +319,7 @@ class KeycloakAPIClient:
         client_object = self.get_client_by_client_id(client_id)
         self.logger.info(f"Deleting Scope '{scope_id}' from Client '{client_id}'")
         if client_object:
-            url = f"{self.base_url}/admin/realms/{self.realm}/clients/{client_object['id']}/default-client-scopes/{3}"
+            url = f"{self.base_url}/admin/realms/{self.realm}/clients/{client_object['id']}/default-client-scopes/{scope_id}"
             return self.send_request(
                 "delete",
                 url,
@@ -337,6 +337,7 @@ class KeycloakAPIClient:
         """
         headers = self.__get_admin_access_token_headers()
         client_object = self.get_client_by_client_id(client_id)
+        original_scopes = deepcopy(client_object['defaultClientScopes'])
         self.logger.info(
             "Updating client with the following new propeties: {0}".format(kwargs)
         )
@@ -356,9 +357,25 @@ class KeycloakAPIClient:
             self.send_request(
                 "put", url, data=json.dumps(client_object), headers=headers
             )
+            # If default scopes are in kwargs and are different to the ones in
+            # client_object, cycle through and update the scopes
+            if "defaultClientScopes" in kwargs:
+                new_scopes = kwargs["defaultClientScopes"]
+                scopes_to_add = set(new_scopes) - set(original_scopes)
+                scopes_to_delete = set(original_scopes) - set(new_scopes)
+                if scopes_to_add or scopes_to_delete:
+                    all_scopes = self.get_scopes()
+                    for scope in scopes_to_add:
+                        target_scope  = next((x['id'] for x in all_scopes if x['name'] == scope), None)
+                        if target_scope:
+                            self.add_client_scope(client_id, target_scope)
+                    for scope in scopes_to_delete:
+                        target_scope  = next((x['id'] for x in all_scopes if x['name'] == scope), None)
+                        if target_scope:
+                            self.delete_client_scope(client_id, target_scope)
+
             if "clientId" in kwargs:
                 client_id = kwargs["clientId"]
-
             updated_client = self.get_client_by_client_id(client_id)
             self.logger.info(
                 "Client '{0}' updated: {1}".format(client_id, updated_client)
