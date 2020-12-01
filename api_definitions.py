@@ -116,9 +116,7 @@ class Scopes(Resource):
         if ret:
             return ret, 200
         else:
-            return json_response(
-                "Cannot get scopes", 400
-            )
+            return json_response("Cannot get scopes", 400)
 
 
 @ns.route("/<path:client_id>/default-scopes")
@@ -131,8 +129,7 @@ class DefaultClientScopes(Resource):
             return ret, 200
         else:
             return json_response(
-                f"Cannot get '{client_id}' scopes. Check if client exists",
-                400,
+                f"Cannot get '{client_id}' scopes. Check if client exists", 400
             )
 
 
@@ -144,15 +141,13 @@ class ManageDefaultClientScopes(Resource):
         ret = keycloak_client.add_client_scope(client_id, scope_id)
         if ret:
             return json_response(
-                f"Scope '{scope_id}' added to Client '{client_id}' successfully",
-                200
+                f"Scope '{scope_id}' added to Client '{client_id}' successfully", 200
             )
         else:
             return json_response(
                 f"Cannot add Scope '{scope_id}' to Client '{client_id}'. Check if client and scope exist",
                 400,
             )
-
 
     @auth_lib_helper.oidc_validate_api
     def delete(self, client_id, scope_id):
@@ -161,7 +156,7 @@ class ManageDefaultClientScopes(Resource):
         if ret:
             return json_response(
                 f"Scope '{scope_id}' deleted from Client '{client_id}' successfully",
-                200
+                200,
             )
         else:
             return json_response(

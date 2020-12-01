@@ -270,9 +270,7 @@ class KeycloakAPIClient:
         headers = self.__get_admin_access_token_headers()
         self.logger.info(f"Getting all scopes for Realm '{self.realm}'")
         url = f"{self.base_url}/admin/realms/{self.realm}/client-scopes"
-        response = self.send_request(
-            "get", url, headers=headers
-        )
+        response = self.send_request("get", url, headers=headers)
         return response.json()
 
     def get_client_default_scopes(self, client_id):
@@ -285,12 +283,12 @@ class KeycloakAPIClient:
         self.logger.info(f"Getting the scopes for client '{client_id}'")
         if client_object:
             url = f"{self.base_url}/admin/realms/{self.realm}/clients/{client_object['id']}/default-client-scopes"
-            response = self.send_request(
-                "get", url, headers=headers
-            )
+            response = self.send_request("get", url, headers=headers)
             return response.json()
         else:
-            self.logger.info(f"Cannot get scopes for Client '{client_id}'. Client not found")
+            self.logger.info(
+                f"Cannot get scopes for Client '{client_id}'. Client not found"
+            )
             return
 
     def add_client_scope(self, client_id, scope_id):
@@ -302,13 +300,11 @@ class KeycloakAPIClient:
         self.logger.info(f"Adding Scope '{scope_id}' to client '{client_id}'")
         if client_object:
             url = f"{self.base_url}/admin/realms/{self.realm}/clients/{client_object['id']}/default-client-scopes/{scope_id}"
-            return self.send_request(
-                "put",
-                url,
-                headers=headers
-            )
+            return self.send_request("put", url, headers=headers)
         else:
-            self.logger.info(f"Cannot add Scope '{scope_id}' to Client '{client_id}'. Client not found")
+            self.logger.info(
+                f"Cannot add Scope '{scope_id}' to Client '{client_id}'. Client not found"
+            )
             return
 
     def delete_client_scope(self, client_id, scope_id):
@@ -320,14 +316,30 @@ class KeycloakAPIClient:
         self.logger.info(f"Deleting Scope '{scope_id}' from Client '{client_id}'")
         if client_object:
             url = f"{self.base_url}/admin/realms/{self.realm}/clients/{client_object['id']}/default-client-scopes/{scope_id}"
-            return self.send_request(
-                "delete",
-                url,
-                headers=headers
-            )
+            return self.send_request("delete", url, headers=headers)
         else:
-            self.logger.info(f"Cannot delete Scope '{scope_id}' from Client '{client_id}'. Client not found")
+            self.logger.info(
+                f"Cannot delete Scope '{scope_id}' from Client '{client_id}'. Client not found"
+            )
             return
+
+    def _assign_default_scopes(self, new_scopes, original_scopes):
+        scopes_to_add = set(new_scopes) - set(original_scopes)
+        scopes_to_delete = set(original_scopes) - set(new_scopes)
+        if scopes_to_add or scopes_to_delete:
+            all_scopes = self.get_scopes()
+            for scope in scopes_to_add:
+                target_scope = next(
+                    (x["id"] for x in all_scopes if x["name"] == scope), None
+                )
+                if target_scope:
+                    self.add_client_scope(client_id, target_scope)
+            for scope in scopes_to_delete:
+                target_scope = next(
+                    (x["id"] for x in all_scopes if x["name"] == scope), None
+                )
+                if target_scope:
+                    self.delete_client_scope(client_id, target_scope)
 
     def update_client_properties(self, client_id, **kwargs):
         """
@@ -337,7 +349,7 @@ class KeycloakAPIClient:
         """
         headers = self.__get_admin_access_token_headers()
         client_object = self.get_client_by_client_id(client_id)
-        original_scopes = deepcopy(client_object['defaultClientScopes'])
+        original_scopes = deepcopy(client_object["defaultClientScopes"])
         self.logger.info(
             "Updating client with the following new propeties: {0}".format(kwargs)
         )
@@ -361,19 +373,7 @@ class KeycloakAPIClient:
             # client_object, cycle through and update the scopes
             if "defaultClientScopes" in kwargs:
                 new_scopes = kwargs["defaultClientScopes"]
-                scopes_to_add = set(new_scopes) - set(original_scopes)
-                scopes_to_delete = set(original_scopes) - set(new_scopes)
-                if scopes_to_add or scopes_to_delete:
-                    all_scopes = self.get_scopes()
-                    for scope in scopes_to_add:
-                        target_scope  = next((x['id'] for x in all_scopes if x['name'] == scope), None)
-                        if target_scope:
-                            self.add_client_scope(client_id, target_scope)
-                    for scope in scopes_to_delete:
-                        target_scope  = next((x['id'] for x in all_scopes if x['name'] == scope), None)
-                        if target_scope:
-                            self.delete_client_scope(client_id, target_scope)
-
+                self._assign_default_scopes(new_scopes, original_scopes)
             if "clientId" in kwargs:
                 client_id = kwargs["clientId"]
             updated_client = self.get_client_by_client_id(client_id)

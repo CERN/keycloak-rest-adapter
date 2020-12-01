@@ -16,6 +16,11 @@ def index():
     return redirect("/swagger-ui")
 
 
+def _set_config_if_undefined(app, variable, value):
+    if not app.config.get(variable):
+        app.config.update(**{variable: value})
+
+
 def configure_keycloak_dependent_variables(app: Flask) -> None:
     keycloak_server = app.config["KEYCLOAK_SERVER"]
     api_version = app.config["API_VERSION"]
@@ -27,13 +32,24 @@ def configure_keycloak_dependent_variables(app: Flask) -> None:
             "authorizationUrl": f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/auth",
         }
     )
+    # Configuration URL for all the keys of the Keycloak server
+    _set_config_if_undefined(
+        app,
+        "OIDC_JWKS_URL",
+        f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/certs",
+    )
+    # The 'iss' field in the token should match this
+    _set_config_if_undefined(
+        app, "OIDC_ISSUER", f"{keycloak_server}/auth/realms/{realm}"
+    )
+    # UI OAuth URL
+    _set_config_if_undefined(
+        app,
+        "OAUTH_AUTH_URL",
+        f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/auth",
+    )
     app.config.update(
         OAUTH_AUTHORIZATIONS=authorizations,
-        # Configuration URL for all the keys of the Keycloak server
-        OIDC_JWKS_URL=f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/certs",
-        # The 'iss' field in the token should match this
-        OIDC_ISSUER=f"{keycloak_server}/auth/realms/{realm}",
-        OAUTH_AUTH_URL=f"{keycloak_server}/auth/realms/{realm}/protocol/openid-connect/auth",
         API_URL_PREFIX="/api/{}".format(api_version),
     )
 
