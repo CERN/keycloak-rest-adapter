@@ -323,7 +323,7 @@ class KeycloakAPIClient:
             )
             return
 
-    def _assign_default_scopes(self, new_scopes, original_scopes):
+    def _assign_default_scopes(self, new_scopes, original_scopes, client_id):
         scopes_to_add = set(new_scopes) - set(original_scopes)
         scopes_to_delete = set(original_scopes) - set(new_scopes)
         if scopes_to_add or scopes_to_delete:
@@ -373,12 +373,12 @@ class KeycloakAPIClient:
             # client_object, cycle through and update the scopes
             if "defaultClientScopes" in kwargs:
                 new_scopes = kwargs["defaultClientScopes"]
-                self._assign_default_scopes(new_scopes, original_scopes)
+                self._assign_default_scopes(new_scopes, original_scopes, client_id)
             if "clientId" in kwargs:
                 client_id = kwargs["clientId"]
             updated_client = self.get_client_by_client_id(client_id)
             self.logger.info(
-                "Client '{0}' updated: {1}".format(client_id, updated_client)
+                "Client '{0}' updated: {1}".format(client_id, updated_client, client_id)
             )
             return updated_client
         else:
