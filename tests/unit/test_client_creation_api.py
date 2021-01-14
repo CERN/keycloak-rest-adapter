@@ -48,6 +48,11 @@ class TestClientCreationApi(WebTestBase):
                 "authz-roles",
                 "web-origins",
             ],
+            "optionalClientScopes": [
+                "address",
+                "offline_access",
+                "phone",
+            ],
         }
 
     def _mock_oidc_call_consent_required(self):
@@ -75,6 +80,11 @@ class TestClientCreationApi(WebTestBase):
                 "email",
                 "authz-roles",
                 "web-origins",
+            ],
+            "optionalClientScopes": [
+                "address",
+                "offline_access",
+                "phone",
             ],
         }
 

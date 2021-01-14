@@ -42,6 +42,11 @@ CLIENT_DEFAULTS = {
             "authz-roles",
             "web-origins",
         ],
+        "optionalClientScopes": [
+            "address",
+            "offline_access",
+            "phone",
+        ]
     },
     "saml": {
         "protocolMappers": [],
