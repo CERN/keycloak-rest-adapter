@@ -349,11 +349,11 @@ class KeycloakAPIClient:
         """
         headers = self.__get_admin_access_token_headers()
         client_object = self.get_client_by_client_id(client_id)
-        original_scopes = deepcopy(client_object["defaultClientScopes"])
-        self.logger.info(
-            "Updating client with the following new propeties: {0}".format(kwargs)
-        )
         if client_object:
+            original_scopes = deepcopy(client_object["defaultClientScopes"])
+            self.logger.info(
+                "Updating client with the following new propeties: {0}".format(kwargs)
+            )
             url = "{0}/admin/realms/{1}/clients/{2}".format(
                 self.base_url, self.realm, client_object["id"]
             )
