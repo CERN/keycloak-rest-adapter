@@ -13,6 +13,10 @@ KEYCLOAK_REALM = "cern"
 
 # OAuth config (for the Swagger UI)
 # The client ID used to login from the UI
+OAUTH_AUTH_URL = "https://keycloak-dev.cern.ch/auth/realms/cern/protocol/openid-connect/auth"
+OIDC_JWKS_URL = "https://keycloak-dev.cern.ch/auth/realms/cern/protocol/openid-connect/certs"
+OIDC_ISSUER = "https://keycloak-dev.cern.ch/auth/realms/cern"
+
 SWAGGER_UI_OAUTH_CLIENT_ID = "keycloak-rest-adapter"
 
 # OIDC config
@@ -69,5 +73,8 @@ AUTH_API_ACCESS_ROLE = "admin"
 AUTH_USER_ACTIONS_ROLE = "user"
 AUTH_USER_ACTIONS_MFA_ROLE = "user_mfa"
 
-# Non-consent domains (i.e. CERN & Localhost)
-NON_CONSENT_DOMAINS_REGEX = r"(cern\.ch$|\.cern$|localhost$|127.0.0.1$)"
+# Internal domains (i.e. CERN & Localhost)
+INTERNAL_DOMAINS_REGEX = r"(cern\.ch$|\.cern$|localhost$|localhost.localdomain$|127.0.0.1$|[::1]$)"
+
+EXTERNAL_SCOPE_OIDC = 'external'
+EXTERNAL_SCOPE_SAML = 'saml-external'

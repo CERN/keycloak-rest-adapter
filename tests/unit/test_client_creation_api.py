@@ -184,6 +184,7 @@ class TestClientCreationApi(WebTestBase):
         mock_creation = {"clientId": self.client_id}
         expected_call = self._mock_oidc_call()
         self.keycloak_api_mock.create_new_client.return_value = mock_creation
+        self.keycloak_api_mock.redirects_outside_cern.return_value = False
 
         # act
         resp = self.app_client.post(

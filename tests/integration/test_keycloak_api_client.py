@@ -54,6 +54,9 @@ class TestKeycloakApiClient(unittest.TestCase):
                 "KEYCLOAK_REALM": "test",
                 "KEYCLOAK_CLIENT_ID": "keycloak-rest-adapter",
                 "KEYCLOAK_CLIENT_SECRET": "42ac0602-a08e-49f7-9b92-44afd622d29c",
+                "INTERNAL_DOMAINS_REGEX": r"(cern\.ch$|\.cern$|localhost$|localhost.localdomain$|127.0.0.1$|[::1]$)",
+                "EXTERNAL_SCOPE_OIDC": "external",
+                "EXTERNAL_SCOPE_SAML": "saml-external"
             }
 
         self.client.init_app(_app)

@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 
+import re
 import json
 import logging
 from typing import Dict, Any
 from copy import deepcopy
+from urllib.parse import urlparse
 
 import requests
 
 from log_utils import configure_logging
 from utils import ResourceNotFoundError
-
 
 class KeycloakAPIClient:
     # To be investigated:
@@ -28,6 +29,9 @@ class KeycloakAPIClient:
             app.config["KEYCLOAK_REALM"],
             app.config["KEYCLOAK_CLIENT_ID"],
             app.config["KEYCLOAK_CLIENT_SECRET"],
+            app.config["INTERNAL_DOMAINS_REGEX"],
+            app.config["EXTERNAL_SCOPE_OIDC"],
+            app.config["EXTERNAL_SCOPE_SAML"],
         )
 
     def _initialize(
@@ -36,6 +40,9 @@ class KeycloakAPIClient:
         realm,
         client_id,
         client_secret,
+        internal_domains_regex,
+        external_scope_oidc,
+        external_scope_saml,
         master_realm="master",
         mfa_realm="mfa",
     ):
@@ -45,12 +52,16 @@ class KeycloakAPIClient:
         realm: realm name KeycloakAPI Client will interact with
         client_id: ex. keycloak-rest-adapter
         client_secret: client_id secret
+        internal_domains_regex: RegEx to filter out CERN URLs
         master_realm: master (needed it for admin API calls, admin token...)
         """
         self.keycloak_server = server
         self.realm = realm
         self.client_id = client_id
         self.client_secret = client_secret
+        self.internal_domains_regex = internal_domains_regex
+        self.external_scope_oidc = external_scope_oidc
+        self.external_scope_saml = external_scope_saml
         self.master_realm = master_realm
         self.mfa_realm = mfa_realm
 
@@ -323,7 +334,7 @@ class KeycloakAPIClient:
             )
             return
 
-    def _assign_default_scopes(self, new_scopes, original_scopes, client_id):
+    def assign_default_scopes(self, new_scopes, original_scopes, client_id):
         scopes_to_add = set(new_scopes) - set(original_scopes)
         scopes_to_delete = set(original_scopes) - set(new_scopes)
         if scopes_to_add or scopes_to_delete:
@@ -341,6 +352,14 @@ class KeycloakAPIClient:
                 if target_scope:
                     self.delete_client_scope(client_id, target_scope)
 
+    def assign_single_scope(self, scope_name, client_id):
+        all_scopes = self.get_scopes()
+        target_scope = next(
+            (x["id"] for x in all_scopes if x["name"] == scope_name), None
+        )
+        if target_scope:
+            self.add_client_scope(client_id, target_scope)
+
     def update_client_properties(self, client_id, **kwargs):
         """
         Update existing client properties
@@ -349,10 +368,12 @@ class KeycloakAPIClient:
         """
         headers = self.__get_admin_access_token_headers()
         client_object = self.get_client_by_client_id(client_id)
+
         if client_object:
+            is_external = False
             original_scopes = deepcopy(client_object["defaultClientScopes"])
             self.logger.info(
-                "Updating client with the following new propeties: {0}".format(kwargs)
+                "Updating client with the following new properties: {0}".format(kwargs)
             )
             url = "{0}/admin/realms/{1}/clients/{2}".format(
                 self.base_url, self.realm, client_object["id"]
@@ -361,10 +382,25 @@ class KeycloakAPIClient:
                 if key in client_object or key == "description":
                     self.logger.debug("Changing value: {}".format(value))
                     client_object[key] = value
+                if key == 'redirectUris':
+                    is_external = self.redirects_outside_cern(kwargs[key])
                 else:
                     self.logger.warn(
                         "'{0}' not a valid client property. Skipping...".format(key)
                     )
+
+            if is_external:
+                client_object['consentRequired'] = True
+
+                external_scope = self.external_scope_oidc
+                if client_object['protocol'] == 'saml':
+                    external_scope = self.external_scope_saml
+
+                if 'defaultClientScopes' in kwargs:
+                    kwargs['defaultClientScopes'].append(external_scope)
+                    kwargs['defaultClientScopes'].extend(original_scopes)
+                else:
+                    kwargs['defaultClientScopes'] = original_scopes + [external_scope]
 
             self.send_request(
                 "put", url, data=json.dumps(client_object), headers=headers
@@ -373,7 +409,7 @@ class KeycloakAPIClient:
             # client_object, cycle through and update the scopes
             if "defaultClientScopes" in kwargs:
                 new_scopes = kwargs["defaultClientScopes"]
-                self._assign_default_scopes(new_scopes, original_scopes, client_id)
+                self.assign_default_scopes(new_scopes, original_scopes, client_id)
             if "clientId" in kwargs:
                 client_id = kwargs["clientId"]
             updated_client = self.get_client_by_client_id(client_id)
@@ -1214,5 +1250,22 @@ class KeycloakAPIClient:
             webauthn_must_initialize,
         )
 
+    def redirects_outside_cern(self, redirects):
+        """ Sees whether at least one of the redirect Uris goes outside
+        CERN or localhost. In this case, assume that the CERN or localhost
+        redirects are used for testing within CERN.
+        """
+        p = re.compile(self.internal_domains_regex)
+        for redirect in redirects:
+            try:
+                hostname = urlparse(redirect).hostname
+                if not p.search(hostname):
+                    return True
+            except (AttributeError, TypeError):
+                # Could be a native app hostname
+                if not redirect.startswith("ch.cern"):
+                    return True
+        # No external redirect found
+        return False
 
 keycloak_client: KeycloakAPIClient = KeycloakAPIClient()

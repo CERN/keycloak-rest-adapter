@@ -1,7 +1,5 @@
 import logging
 from copy import deepcopy
-from urllib.parse import urlparse
-import re
 
 from flask import current_app, jsonify, request
 from flask_restx import Resource, fields, Api
@@ -252,24 +250,6 @@ class CommonCreator(Resource):
             "protocolMapper": "oidc-audience-mapper",
         }
 
-    def _redirects_outside_cern(self, redirects):
-        """ Sees whether at least one of the redirect Uris goes outside
-        CERN or localhost. In this case, assume that the CERN or localhost
-        redirects are used for testing within CERN.
-        """
-        p = re.compile(api.app.config["NON_CONSENT_DOMAINS_REGEX"])
-        for redirect in redirects:
-            try:
-                hostname = urlparse(redirect).hostname
-                if not p.search(hostname):
-                    return True
-            except (AttributeError, TypeError):
-                # Could be a native app hostname
-                if not redirect.startswith("ch.cern"):
-                    return True
-        # No external redirect found
-        return False
-
     def _merge_request_and_defaults(self, data, defaults):
         """ Merges the incoming data on top of the defaults, if the object is
         a list the request object will be appended, otherwise overwritten
@@ -314,13 +294,19 @@ class CommonCreator(Resource):
                 # Add parsed client description
                 saml_params.update(client_description)
 
-                # If the redirect URI is not .cern or a .cern.ch, enable consent
+                # If the redirect URI is not .cern or a .cern.ch, enable consent and add the 'saml-external' scope.
+                external_client = False
                 if client_description.get(
                     "redirectUris"
-                ) and self._redirects_outside_cern(client_description["redirectUris"]):
+                ) and keycloak_client.redirects_outside_cern(client_description["redirectUris"]):
                     saml_params["consentRequired"] = True
+                    external_client = True
 
                 new_client = keycloak_client.create_new_client(**saml_params)
+
+                # Add the external scope.
+                if external_client:
+                    keycloak_client.assign_single_scope(current_app.config["EXTERNAL_SCOPE_SAML"], new_client['clientId'])
 
             elif protocol == "openid":
                 client_params = self._merge_request_and_defaults(
@@ -334,13 +320,20 @@ class CommonCreator(Resource):
                     self._create_oidc_protocol_mapper(data)
                 )
 
-                # If the redirect URI is not .cern or a .cern.ch, enable consent
-                if client_params.get("redirectUris") and self._redirects_outside_cern(
+                external_client = False
+                # If the redirect URI is not .cern or a .cern.ch, enable consent and add the 'external' scope.
+                if client_params.get("redirectUris") and keycloak_client.redirects_outside_cern(
                     client_params["redirectUris"]
                 ):
                     client_params["consentRequired"] = True
+                    external_client = True
 
                 new_client = keycloak_client.create_new_client(**client_params)
+
+                # Add the external scope.
+                if external_client:
+                    keycloak_client.assign_single_scope(current_app.config["EXTERNAL_SCOPE_OIDC"], new_client['clientId'])
+
             else:
                 return json_response(
                     "Unsupported client protocol '{}'".format(protocol), 400
