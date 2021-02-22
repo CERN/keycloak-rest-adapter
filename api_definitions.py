@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from flask import current_app, jsonify, request
 from flask_restx import Resource, fields, Api
-
+from model import Client, ClientTypes
 from auth import auth_lib_helper
 from keycloak_api_client.keycloak import keycloak_client
 from utils import (
@@ -51,8 +51,8 @@ class TokenExchangePermissions(Resource):
     def put(self, target_client_id, requestor_client_id):
         """Grants token exchange permissions"""
 
-        target_client = keycloak_client.get_client_by_client_id(target_client_id)
-        requestor_client = keycloak_client.get_client_by_client_id(requestor_client_id)
+        target_client = keycloak_client.get_client_object(target_client_id)
+        requestor_client = keycloak_client.get_client_object(requestor_client_id)
 
         verify_error = self.__verify_clients(
             target_client, requestor_client, target_client_id, requestor_client_id
@@ -71,8 +71,8 @@ class TokenExchangePermissions(Resource):
     @auth_lib_helper.oidc_validate_api
     def delete(self, target_client_id, requestor_client_id):
         """Revokes token exchange permissions"""
-        target_client = keycloak_client.get_client_by_client_id(target_client_id)
-        requestor_client = keycloak_client.get_client_by_client_id(requestor_client_id)
+        target_client = keycloak_client.get_client_object(target_client_id)
+        requestor_client = keycloak_client.get_client_object(requestor_client_id)
 
         verify_error = self.__verify_clients(
             target_client, requestor_client, target_client_id, requestor_client_id
@@ -176,9 +176,12 @@ class ClientDetails(Resource):
         data = get_request_data(request)
         if (protocol == "saml") and ("definition" in data):
             data = keycloak_client.client_description_converter(data["definition"])
-        updated_client = keycloak_client.update_client_properties(client_id, **data)
+            client = Client(data, ClientTypes.SAML)
+        else:
+            client = Client(data, ClientTypes.OIDC)
+        updated_client = keycloak_client.update_client_properties(client_id, client)
         if updated_client:
-            return jsonify(updated_client)
+            return jsonify(updated_client.definition)
         else:
             return json_response(
                 "Cannot update '{0}' properties. Check if client exists or properties are valid".format(
@@ -235,33 +238,6 @@ class CommonCreator(Resource):
         self.protocol_mappers = current_app.config["CLIENT_DEFAULTS"]
         self.auth_protocols = current_app.config["AUTH_PROTOCOLS"]
 
-    def _create_oidc_protocol_mapper(self, data):
-        """
-        Creates the protocol mapper for OIDC
-        """
-        return {
-            "protocol": "openid-connect",
-            "config": {
-                "id.token.claim": "false",
-                "access.token.claim": "true",
-                "included.client.audience": data["clientId"],
-            },
-            "name": "audience",
-            "protocolMapper": "oidc-audience-mapper",
-        }
-
-    def _merge_request_and_defaults(self, data, defaults):
-        """ Merges the incoming data on top of the defaults, if the object is
-        a list the request object will be appended, otherwise overwritten
-        """
-        output = deepcopy(defaults)
-        for k in data:
-            if k in output and isinstance(data[k], list):
-                output[k].extend(data[k])
-            else:
-                output[k] = data[k]
-        return output
-
     def common_create(self, data):
         """
         Common create method for all the endpoints
@@ -277,80 +253,32 @@ class CommonCreator(Resource):
                     data[selected_protocol_definition_key]
                 )
                 data.pop(selected_protocol_definition_key)
+                client = Client(client_description, ClientTypes.SAML)
 
-                # AuthnRequestsSigned attribute is not being correctly parsed by keycloak
-                # If there is no signing certificate, set the clientCertificateRequired attribute to False
-                if (
-                    client_description.get("attributes")
-                    and client_description["attributes"].get("saml.signing.certificate")
-                    is None
-                ):
-                    client_description["attributes"]["saml.client.signature"] = "false"
-
-                # Merge incoming data with defaults
-                saml_params = self._merge_request_and_defaults(
-                    data, self.protocol_mappers[protocol]
-                )
-                # Add parsed client description
-                saml_params.update(client_description)
-
-                # If the redirect URI is not .cern or a .cern.ch, enable consent and add the 'saml-external' scope.
-                external_client = False
-                if client_description.get(
-                    "redirectUris"
-                ) and keycloak_client.redirects_outside_cern(client_description["redirectUris"]):
-                    saml_params["consentRequired"] = True
-                    external_client = True
-
-                new_client = keycloak_client.create_new_client(**saml_params)
-
-                # Add the external scope.
-                if external_client:
-                    keycloak_client.assign_single_scope(current_app.config["EXTERNAL_SCOPE_SAML"], new_client['clientId'])
-
-            elif protocol == "openid":
-                client_params = self._merge_request_and_defaults(
-                    data, self.protocol_mappers[protocol]
-                )
-
-                # Include the audience mapper by default
-                if "protocolMappers" not in client_params:
-                    client_params["protocolMappers"] = {}
-                client_params["protocolMappers"].append(
-                    self._create_oidc_protocol_mapper(data)
-                )
-
-                external_client = False
-                # If the redirect URI is not .cern or a .cern.ch, enable consent and add the 'external' scope.
-                if client_params.get("redirectUris") and keycloak_client.redirects_outside_cern(
-                    client_params["redirectUris"]
-                ):
-                    client_params["consentRequired"] = True
-                    external_client = True
-
-                new_client = keycloak_client.create_new_client(**client_params)
-
-                # Add the external scope.
-                if external_client:
-                    keycloak_client.assign_single_scope(current_app.config["EXTERNAL_SCOPE_OIDC"], new_client['clientId'])
-
+            elif protocol == ClientTypes.OIDC:
+                client = Client(data, ClientTypes.OIDC)
             else:
-                return json_response(
-                    "Unsupported client protocol '{}'".format(protocol), 400
-                )
+                return json_response("Unsupported client protocol '{}'".format(protocol), 400)
+            new_client_response = keycloak_client.create_new_client(client)
         else:
             return json_response(
-                "The request is missing '{}'. It must be passed as a query parameter".format(
+                "The request is missing '{}'. It must be passed as a json field".format(
                     selected_protocol_definition_key
                 ),
                 400,
             )
         try:
-            return jsonify(new_client)
+            if "errorMessage" in new_client_response:
+                return json_response(
+                    "Error creating new client: {}.".format(new_client_response["errorMessage"]), 400
+                )
+            else:
+                new_client = Client(new_client_response)
+                return jsonify(new_client.definition)
         except Exception:
             logging.exception("Unknown error creating client")
             return json_response(
-                "Unknown error creating client: {}".format(new_client), 400
+                "Unknown error creating client: {}".format(new_client_response), 500
             )
 
 
@@ -413,7 +341,6 @@ class UserDetails(Resource):
                 ),
                 400,
             )
-
 
 #
 # Routes for MFA settings

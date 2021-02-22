@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 
-import re
 import json
 import logging
+from model import Client, ClientTypes
 from typing import Dict, Any
 from copy import deepcopy
-from urllib.parse import urlparse
 
 import requests
 
 from log_utils import configure_logging
 from utils import ResourceNotFoundError
+
 
 class KeycloakAPIClient:
     # To be investigated:
@@ -24,25 +24,19 @@ class KeycloakAPIClient:
         """
         Initialize the adapter based on the app config
         """
-        self._initialize(
+        self.__initialize(
             app.config["KEYCLOAK_SERVER"],
             app.config["KEYCLOAK_REALM"],
             app.config["KEYCLOAK_CLIENT_ID"],
             app.config["KEYCLOAK_CLIENT_SECRET"],
-            app.config["INTERNAL_DOMAINS_REGEX"],
-            app.config["EXTERNAL_SCOPE_OIDC"],
-            app.config["EXTERNAL_SCOPE_SAML"],
         )
 
-    def _initialize(
+    def __initialize(
         self,
         server,
         realm,
         client_id,
         client_secret,
-        internal_domains_regex,
-        external_scope_oidc,
-        external_scope_saml,
         master_realm="master",
         mfa_realm="mfa",
     ):
@@ -59,9 +53,6 @@ class KeycloakAPIClient:
         self.realm = realm
         self.client_id = client_id
         self.client_secret = client_secret
-        self.internal_domains_regex = internal_domains_regex
-        self.external_scope_oidc = external_scope_oidc
-        self.external_scope_saml = external_scope_saml
         self.master_realm = master_realm
         self.mfa_realm = mfa_realm
 
@@ -105,7 +96,7 @@ class KeycloakAPIClient:
         self.access_token_object = None
         self.master_realm_client = None
 
-    def __send_request(self, request_type, url, **kwargs):
+    def __send_authorized_request(self, request_type, url, **kwargs):
         # if there is 'headers' in kwargs use it instead of default class one
         r_headers = deepcopy(self.headers)
         if "headers" in kwargs:
@@ -120,10 +111,10 @@ class KeycloakAPIClient:
             )
         return ret
 
-    def send_request(self, request_type, url, **kwargs):
+    def __send_request(self, request_type, url, **kwargs):
         """ Call the private method __send_request and retry in case the access_token has expired"""
         try:
-            ret = self.__send_request(request_type, url, **kwargs)
+            ret = self.__send_authorized_request(request_type, url, **kwargs)
         except requests.exceptions.ConnectionError:
             msg = "Cannot process the request. Is the keycloak server down ('{0}')?".format(
                 self.keycloak_server
@@ -136,7 +127,7 @@ class KeycloakAPIClient:
             self.access_token_object = self.get_admin_access_token()
             self.logger.info("Updating request headers with new access token")
             kwargs["headers"] = self.__get_admin_access_token_headers()
-            return self.__send_request(request_type, url, **kwargs)
+            return self.__send_authorized_request(request_type, url, **kwargs)
         else:
             return ret
 
@@ -173,7 +164,7 @@ class KeycloakAPIClient:
             self.base_url, self.realm, clientid
         )
 
-        ret = self.send_request("put", url, headers=headers, data=json.dumps(data))
+        ret = self.__send_request("put", url, headers=headers, data=json.dumps(data))
         return ret
 
     def create_client_mapper(self, client_id, **kwargs):
@@ -206,7 +197,7 @@ class KeycloakAPIClient:
             url = "{0}/admin/realms/{1}/clients/{2}/protocol-mappers/models".format(
                 self.base_url, self.realm, client_object["id"]
             )
-            ret = self.send_request(
+            ret = self.__send_request(
                 "post", url, data=json.dumps(kwargs), headers=headers
             )
             return ret
@@ -248,7 +239,7 @@ class KeycloakAPIClient:
                                 )
                                 return  # not update and return empty
 
-                        ret = self.send_request(
+                        ret = self.__send_request(
                             "put", url, data=json.dumps(updated_mapper), headers=headers
                         )
                         return ret
@@ -281,7 +272,7 @@ class KeycloakAPIClient:
         headers = self.__get_admin_access_token_headers()
         self.logger.info(f"Getting all scopes for Realm '{self.realm}'")
         url = f"{self.base_url}/admin/realms/{self.realm}/client-scopes"
-        response = self.send_request("get", url, headers=headers)
+        response = self.__send_request("get", url, headers=headers)
         return response.json()
 
     def get_client_default_scopes(self, client_id):
@@ -294,7 +285,7 @@ class KeycloakAPIClient:
         self.logger.info(f"Getting the scopes for client '{client_id}'")
         if client_object:
             url = f"{self.base_url}/admin/realms/{self.realm}/clients/{client_object['id']}/default-client-scopes"
-            response = self.send_request("get", url, headers=headers)
+            response = self.__send_request("get", url, headers=headers)
             return response.json()
         else:
             self.logger.info(
@@ -311,7 +302,7 @@ class KeycloakAPIClient:
         self.logger.info(f"Adding Scope '{scope_id}' to client '{client_id}'")
         if client_object:
             url = f"{self.base_url}/admin/realms/{self.realm}/clients/{client_object['id']}/default-client-scopes/{scope_id}"
-            return self.send_request("put", url, headers=headers)
+            return self.__send_request("put", url, headers=headers)
         else:
             self.logger.info(
                 f"Cannot add Scope '{scope_id}' to Client '{client_id}'. Client not found"
@@ -327,7 +318,7 @@ class KeycloakAPIClient:
         self.logger.info(f"Deleting Scope '{scope_id}' from Client '{client_id}'")
         if client_object:
             url = f"{self.base_url}/admin/realms/{self.realm}/clients/{client_object['id']}/default-client-scopes/{scope_id}"
-            return self.send_request("delete", url, headers=headers)
+            return self.__send_request("delete", url, headers=headers)
         else:
             self.logger.info(
                 f"Cannot delete Scope '{scope_id}' from Client '{client_id}'. Client not found"
@@ -360,61 +351,37 @@ class KeycloakAPIClient:
         if target_scope:
             self.add_client_scope(client_id, target_scope)
 
-    def update_client_properties(self, client_id, **kwargs):
+    def update_client_properties(self, client_id, request_client: Client) -> Client:
         """
         Update existing client properties
         kwargs: { "property_name": "new_value", ... , }
         Returns: Updated client object
         """
         headers = self.__get_admin_access_token_headers()
-        client_object = self.get_client_by_client_id(client_id)
+        existing_client = self.get_client_object(client_id)
 
-        if client_object:
-            is_external = False
-            original_scopes = deepcopy(client_object["defaultClientScopes"])
+        if existing_client:
             self.logger.info(
-                "Updating client with the following new properties: {0}".format(kwargs)
+                "Updating client with the following new properties: {0}".format(Client.definition)
             )
+            existing_client.update_definition(request_client.definition)
             url = "{0}/admin/realms/{1}/clients/{2}".format(
-                self.base_url, self.realm, client_object["id"]
+                self.base_url, self.realm, existing_client.definition["id"]
             )
-            for key, value in kwargs.items():
-                if key in client_object or key == "description":
-                    self.logger.debug("Changing value: {}".format(value))
-                    client_object[key] = value
-                if key == 'redirectUris':
-                    is_external = self.redirects_outside_cern(kwargs[key])
-                else:
-                    self.logger.warn(
-                        "'{0}' not a valid client property. Skipping...".format(key)
-                    )
-
-            if is_external:
-                client_object['consentRequired'] = True
-
-                external_scope = self.external_scope_oidc
-                if client_object['protocol'] == 'saml':
-                    external_scope = self.external_scope_saml
-
-                if 'defaultClientScopes' in kwargs:
-                    kwargs['defaultClientScopes'].append(external_scope)
-                    kwargs['defaultClientScopes'].extend(original_scopes)
-                else:
-                    kwargs['defaultClientScopes'] = original_scopes + [external_scope]
-
-            self.send_request(
-                "put", url, data=json.dumps(client_object), headers=headers
+            self.__send_request(
+                "put", url, data=json.dumps(existing_client.definition), headers=headers
             )
-            # If default scopes are in kwargs and are different to the ones in
-            # client_object, cycle through and update the scopes
-            if "defaultClientScopes" in kwargs:
-                new_scopes = kwargs["defaultClientScopes"]
+            # If default scopes are in the request client and are different to the ones in
+            # the exsiting client, cycle through and update the scopes
+            if "defaultClientScopes" in request_client.definition:
+                new_scopes = request_client.definition["defaultClientScopes"]
+                original_scopes = deepcopy(existing_client.definition["defaultClientScopes"])
                 self.assign_default_scopes(new_scopes, original_scopes, client_id)
-            if "clientId" in kwargs:
-                client_id = kwargs["clientId"]
-            updated_client = self.get_client_by_client_id(client_id)
+            if "clientId" in request_client.definition:
+                client_id = request_client.definition["clientId"]
+            updated_client = self.get_client_object(client_id)
             self.logger.info(
-                "Client '{0}' updated: {1}".format(client_id, updated_client, client_id)
+                "Client '{0}' updated: {1}".format(client_id, updated_client)
             )
             return updated_client
         else:
@@ -437,7 +404,7 @@ class KeycloakAPIClient:
         url = "{0}/admin/realms/{1}/client-description-converter".format(
             self.base_url, self.realm
         )
-        ret = self.send_request("post", url, headers=headers, data=payload)
+        ret = self.__send_request("post", url, headers=headers, data=payload)
         return json.loads(ret.text)
 
     def display_client_secret(self, client_id):
@@ -453,7 +420,7 @@ class KeycloakAPIClient:
                     self.base_url, self.realm, client_object["id"]
                 )
 
-                ret = self.send_request("get", url, headers=headers)
+                ret = self.__send_request("get", url, headers=headers)
             else:
                 ret = requests.Response  # new empty response
                 ret.text = "Cannot display client '{0}' secret. Client not openid type".format(
@@ -479,7 +446,7 @@ class KeycloakAPIClient:
                     self.base_url, self.realm, client_object["id"]
                 )
 
-                ret = self.send_request("post", url, headers=headers)
+                ret = self.__send_request("post", url, headers=headers)
                 self.logger.info("Client '{0}' secret regenerated".format(client_id))
             else:
                 ret = requests.Response  # new empty response
@@ -506,7 +473,7 @@ class KeycloakAPIClient:
                 self.base_url, self.realm, client_object["id"]
             )
 
-            ret = self.send_request("delete", url, headers=headers)
+            ret = self.__send_request("delete", url, headers=headers)
             self.logger.info("Deleted client '{0}'".format(client_id))
             return ret
         else:
@@ -522,11 +489,9 @@ class KeycloakAPIClient:
         payload = {"clientId": client_id, "viewable": True}
         url = "{0}/admin/realms/{1}/clients".format(self.base_url, realm)
 
-        ret = self.send_request("get", url, headers=headers, params=payload)
-
+        ret = self.__send_request("get", url, headers=headers, params=payload)
         self.logger.info("Getting client '{0}' object".format(client_id))
         client = json.loads(ret.text)
-
         # keycloak returns a list of 1 element if found, empty if not
         if len(client) == 1:
             self.logger.info(
@@ -536,6 +501,13 @@ class KeycloakAPIClient:
         else:
             self.logger.info("Client '{0}' NOT found".format(client_id))
             return client
+
+    def get_client_object(self, client_id, realm=None) -> Client:
+        client_definition = self.get_client_by_client_id(client_id, realm)
+        if client_definition:
+            return Client(client_definition)
+        else:
+            return None
 
     def get_client_policy_by_name(self, policy_name):
         """
@@ -548,7 +520,7 @@ class KeycloakAPIClient:
             self.base_url, self.realm, self.master_realm_client["id"]
         )
 
-        ret = self.send_request("get", url, headers=headers, params=payload)
+        ret = self.__send_request("get", url, headers=headers, params=payload)
 
         # keycloak returns a list of all matching policies
         matching_policies = json.loads(ret.text)
@@ -612,7 +584,7 @@ class KeycloakAPIClient:
             "decisionStrategy": policy_strategy,
         }
 
-        ret = self.send_request(
+        ret = self.__send_request(
             http_method, url, headers=headers, data=json.dumps(data)
         )
         return ret
@@ -632,7 +604,7 @@ class KeycloakAPIClient:
         )
 
         payload = {"name": permission_name}
-        ret = self.send_request("get", url, headers=headers, params=payload)
+        ret = self.__send_request("get", url, headers=headers, params=payload)
         return json.loads(ret.text)
 
     def get_auth_policy_by_name(self, policy_name):
@@ -648,7 +620,7 @@ class KeycloakAPIClient:
         )
 
         payload = {"name": policy_name}
-        ret = self.send_request("get", url, headers=headers, params=payload)
+        ret = self.__send_request("get", url, headers=headers, params=payload)
         return ret
 
     def get_client_token_exchange_permission(self, clientid):
@@ -665,17 +637,17 @@ class KeycloakAPIClient:
         return self.get_auth_permission_by_name(token_exchange_permission_name)[0]
 
     def grant_token_exchange_permissions(
-        self, target_client_object, requestor_client_object
+        self, target_client_object: Client, requestor_client_object: Client
     ):
         """
         Grant token-exchange permission for target client to destination client
         target_client_object: Object of the target client
         requestor_client_object: Object of the requestor client
         """
-        requestor_clientid = requestor_client_object["clientId"]
-        requestor_id = requestor_client_object["id"]
-        target_clientid = target_client_object["clientId"]
-        target_id = target_client_object["id"]
+        requestor_clientid = requestor_client_object.definition["clientId"]
+        requestor_id = requestor_client_object.definition["id"]
+        target_clientid = target_client_object.definition["clientId"]
+        target_id = target_client_object.definition["id"]
 
         self.set_client_fine_grain_permission(target_id, True)
         client_token_exchange_permission = self.get_client_token_exchange_permission(
@@ -705,17 +677,17 @@ class KeycloakAPIClient:
         )
 
     def revoke_token_exchange_permissions(
-        self, target_client_object, requestor_client_object
+        self, target_client_object: Client, requestor_client_object: Client
     ):
         """
         Revoke token-exchange permission for target client to destination client
         target_client_object: Object of the target client
         requestor_client_object: Object of the requestor client
         """
-        requestor_clientid = requestor_client_object["clientId"]
-        requestor_id = requestor_client_object["id"]
-        target_clientid = target_client_object["clientId"]
-        target_id = target_client_object["id"]
+        requestor_clientid = requestor_client_object.definition["clientId"]
+        requestor_id = requestor_client_object.definition["id"]
+        target_clientid = target_client_object.definition["clientId"]
+        target_id = target_client_object.definition["id"]
 
         client_token_exchange_permission = self.get_client_token_exchange_permission(
             target_id
@@ -771,7 +743,7 @@ class KeycloakAPIClient:
             client_token_exchange_permission["decisionStrategy"] = "AFFIRMATIVE"
 
         client_token_exchange_permission["policies"] = policies
-        ret = self.send_request(
+        ret = self.__send_request(
             "put",
             url,
             headers=headers,
@@ -788,7 +760,7 @@ class KeycloakAPIClient:
             self.base_url, self.realm, self.master_realm_client["id"], permission_id
         )
         headers = self.__get_admin_access_token_headers()
-        ret = self.send_request("get", url, headers=headers)
+        ret = self.__send_request("get", url, headers=headers)
         return json.loads(ret.text)
 
     def get_all_clients(self):
@@ -799,7 +771,7 @@ class KeycloakAPIClient:
         headers = self.__get_admin_access_token_headers()
         payload = {"viewableOnly": "true"}
         url = "{0}/admin/realms/{1}/clients".format(self.base_url, self.realm)
-        ret = self.send_request("get", url, headers=headers, params=payload)
+        ret = self.__send_request("get", url, headers=headers, params=payload)
         # return clients as list of json instead of string
         return json.loads(ret.text)
 
@@ -821,7 +793,7 @@ class KeycloakAPIClient:
                 self.client_id
             )
         )
-        ret = self.send_request("post", url, data=payload)
+        ret = self.__send_request("post", url, data=payload)
         if ret.status_code != 200:
             self.logger.error(
                 "Error occured while getting admin token: {}".format(ret.text)
@@ -850,7 +822,7 @@ class KeycloakAPIClient:
         payload = "client_id={0}&grant_type={1}&client_secret={2}".format(
             client_id, grant_type, client_secret
         )
-        r = self.send_request("post", url, data=payload)
+        r = self.__send_request("post", url, data=payload)
         if r.status_code != 200:
             self.logger.error(
                 "Error getting client credentials: {}, {}".format(r.status_code, r.text)
@@ -877,7 +849,7 @@ class KeycloakAPIClient:
             subject_token,
             audience,
         )
-        r = self.send_request("post", url, data=payload)
+        r = self.__send_request("post", url, data=payload)
         return json.loads(r.text)
 
     def __create_client(self, access_token, **kwargs):
@@ -892,7 +864,7 @@ class KeycloakAPIClient:
         }
         url = "{0}/admin/realms/{1}/clients".format(self.base_url, self.realm)
         self.logger.info("Creating client '%s' --> %s", kwargs["clientId"], kwargs)
-        return self.send_request("post", url, headers=headers, json=kwargs)
+        return self.__send_request("post", url, headers=headers, json=kwargs)
 
     def logout_user(self, user_id):
         """
@@ -902,71 +874,51 @@ class KeycloakAPIClient:
             self.base_url, self.realm, user_id
         )
         self.logger.info("Logging out user ID '{0}'".format(user_id))
-        return self.send_request("post", url)
+        return self.__send_request("post", url)
 
-    def create_new_openid_client(self, **kwargs):
+    def create_new_openid_client(self, client: Client) -> Dict:
         """Add new OPENID client.
         kwargs: See the full list of available params: https://www.keycloak.org/docs-api/3.4/rest-api/index.html#_clientrepresentation
         """
         access_token = self.get_access_token()
-        # load minimum default values to create OPENID-CONNECT client
-        if "redirectUris" not in kwargs:
-            kwargs["redirectUris"] = []
-        if "attributes" not in kwargs:
-            kwargs["attributes"] = {}
-        # by default, create confidential client
-        if "publicClient" not in kwargs:
-            kwargs["publicClient"] = False
-        if "protocol" not in kwargs or kwargs["protocol"] != "openid-connect":
-            # on API level we accept 'openid-connect' & 'openid'. Keycloak only accepts 'openid-connect'
-            kwargs["protocol"] = "openid-connect"
-        response = self.__create_client(access_token, **kwargs)
+        response = self.__create_client(access_token, **client.definition)
         if response.ok:
             # Hack in order to set consent_required to false if it's actually specified, not just ignore it
             # See: https://www.keycloak.org/docs/latest/securing_apps/index.html#client-registration-policies
             # (Consent Required Policy) section
             update_response = self.update_client_properties(
-                kwargs["clientId"], **kwargs
+                client.definition["clientId"], client
             )
             client_secret_json = self.display_client_secret(
-                update_response["clientId"]
+                update_response.definition["clientId"]
             ).json()
-            update_response["secret"] = (
+            update_response.definition["secret"] = (
                 client_secret_json["value"] if "value" in client_secret_json else None
             )
-            return update_response
+            return update_response.definition
         return response.json()
 
-    def create_new_saml_client(self, **kwargs):
+    def create_new_saml_client(self, client: Client) -> Dict:
         """Add new SAML client.
         kwargs: See the full list of available params: https://www.keycloak.org/docs-api/3.4/rest-api/index.html#_clientrepresentation
         """
         access_token = self.get_access_token()
-        # load minimum default values to create SAML client
-        if "redirectUris" not in kwargs:
-            kwargs["redirectUris"] = []
-        if "attributes" not in kwargs:
-            kwargs["attributes"] = {}
-        if "protocol" not in kwargs or kwargs["protocol"] != "saml":
-            kwargs["protocol"] = "saml"
-        response = self.__create_client(access_token, **kwargs)
+        response = self.__create_client(access_token, **client.definition)
         if response.ok:
             # Hack in order to set consent_required to false if it's actually specified, not just ignore it
             # See: https://www.keycloak.org/docs/latest/securing_apps/index.html#client-registration-policies
             # (Consent Required Policy) section
-            return self.update_client_properties(kwargs["clientId"], **kwargs)
+            return self.update_client_properties(client.definition["clientId"], client).definition
         return response.json()
 
-    def create_new_client(self, **kwargs):
+    def create_new_client(self, client: Client) -> Dict:
         """Add new client.
         kwargs: See the full list of available params: https://www.keycloak.org/docs-api/3.4/rest-api/index.html#_clientrepresentation
         """
-        if "protocol" in kwargs:
-            protocol = kwargs["protocol"]
-            if protocol == "saml":
-                return self.create_new_saml_client(**kwargs)
-            elif protocol in ["openid-connect", "openid"]:
-                return self.create_new_openid_client(**kwargs)
+        if client.type == ClientTypes.SAML:
+            return self.create_new_saml_client(client)
+        elif client.type in ClientTypes.OIDC:
+            return self.create_new_openid_client(client)
 
     def get_user_by_username(self, username, realm=None):
         """
@@ -979,7 +931,7 @@ class KeycloakAPIClient:
             self.base_url, realm, username
         )
 
-        ret = self.send_request("get", url, headers=headers)
+        ret = self.__send_request("get", url, headers=headers)
 
         self.logger.info("Getting user '{0}' object".format(username))
         found_users = json.loads(ret.text)
@@ -1010,7 +962,7 @@ class KeycloakAPIClient:
                     self.logger.warning(
                         "'{0}' not a valid client property. Skipping...".format(key)
                     )
-            self.send_request("put", url, data=json.dumps(user_object), headers=headers)
+            self.__send_request("put", url, data=json.dumps(user_object), headers=headers)
 
             updated_user = self.get_user_by_username(username)
             self.logger.info("User '{0}' updated: {1}".format(username, updated_user))
@@ -1033,7 +985,7 @@ class KeycloakAPIClient:
         url = "{0}/admin/realms/{1}/users/{2}/credentials".format(
             self.base_url, self.mfa_realm, user["id"]
         )
-        ret = self.send_request("get", url, headers=headers)
+        ret = self.__send_request("get", url, headers=headers)
         self.logger.info("Getting credentials for user '{0}'".format(username))
         credentials = json.loads(ret.text)
         return user["id"], credentials
@@ -1048,7 +1000,7 @@ class KeycloakAPIClient:
         url = "{0}/admin/realms/{1}/users/{2}/credentials".format(
             self.base_url, self.mfa_realm, user["id"]
         )
-        ret = self.send_request("get", url, headers=headers)
+        ret = self.__send_request("get", url, headers=headers)
         self.logger.info("Getting credentials for user '{0}'".format(username))
         credentials = json.loads(ret.text)
         return user, credentials
@@ -1066,7 +1018,7 @@ class KeycloakAPIClient:
         url = "{0}/admin/realms/{1}/users/{2}/credentials/{3}/moveToFirst".format(
             self.base_url, self.mfa_realm, user["id"], credential_id
         )
-        ret = self.send_request("post", url, headers=headers)
+        ret = self.__send_request("post", url, headers=headers)
         self.logger.info(
             "Updated preferred credential with  ID {0} for user {1}".format(
                 credential_id, username
@@ -1084,7 +1036,7 @@ class KeycloakAPIClient:
         url = "{0}/admin/realms/{1}/users/{2}/credentials/{3}".format(
             self.base_url, self.mfa_realm, user_id, credential_id
         )
-        ret = self.send_request("delete", url, headers=headers)
+        ret = self.__send_request("delete", url, headers=headers)
         self.logger.info(
             "Deleted credential with ID {0} from user {1}".format(
                 credential_id, user_id
@@ -1131,7 +1083,7 @@ class KeycloakAPIClient:
         url = "{0}/admin/realms/{1}/users".format(self.base_url, realm)
 
         user_data = {"username": username}
-        ret = self.send_request(
+        ret = self.__send_request(
             "post", url, data=json.dumps(user_data), headers=headers
         )
         return ret
@@ -1146,7 +1098,7 @@ class KeycloakAPIClient:
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/users/{2}".format(self.base_url, realm, user_id)
 
-        ret = self.send_request("delete", url, headers=headers)
+        ret = self.__send_request("delete", url, headers=headers)
         return ret
 
     def enable_otp_for_user(self, username):
@@ -1214,7 +1166,7 @@ class KeycloakAPIClient:
         return False
 
     # TODO: only return the credential ID
-    def _get_credential(self, credentials, credential_type):
+    def get_credential(self, credentials, credential_type):
         for index, credential in enumerate(credentials):
             if credential["type"] == credential_type:
                 # Keycloak always sets the index of preferred login method to '0'.
@@ -1228,14 +1180,14 @@ class KeycloakAPIClient:
         otp_must_initialize = (
             self.REQUIRED_ACTION_CONFIGURE_OTP in user["requiredActions"]
         )
-        otp_enabled, otp_preferred, otp_credential_id = self._get_credential(
+        otp_enabled, otp_preferred, otp_credential_id = self.get_credential(
             credentials, self.CREDENTIAL_TYPE_OTP
         )
         otp_enabled |= otp_must_initialize
         webauthn_must_initialize = (
             self.REQUIRED_ACTION_WEBAUTHN_REGISTER in user["requiredActions"]
         )
-        webauthn_enabled, webauthn_preferred, webauthn_credential_id = self._get_credential(
+        webauthn_enabled, webauthn_preferred, webauthn_credential_id = self.get_credential(
             credentials, self.CREDENTIAL_TYPE_WEBAUTHN
         )
         webauthn_enabled |= webauthn_must_initialize
@@ -1250,22 +1202,5 @@ class KeycloakAPIClient:
             webauthn_must_initialize,
         )
 
-    def redirects_outside_cern(self, redirects):
-        """ Sees whether at least one of the redirect Uris goes outside
-        CERN or localhost. In this case, assume that the CERN or localhost
-        redirects are used for testing within CERN.
-        """
-        p = re.compile(self.internal_domains_regex)
-        for redirect in redirects:
-            try:
-                hostname = urlparse(redirect).hostname
-                if not p.search(hostname):
-                    return True
-            except (AttributeError, TypeError):
-                # Could be a native app hostname
-                if not redirect.startswith("ch.cern"):
-                    return True
-        # No external redirect found
-        return False
 
 keycloak_client: KeycloakAPIClient = KeycloakAPIClient()

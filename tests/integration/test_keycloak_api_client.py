@@ -1,6 +1,7 @@
 import os
 import unittest
-
+from model import Client
+from flask import Flask
 from keycloak_api_client.keycloak import KeycloakAPIClient
 from tests.utils.keycloak_docker_tools import (
     create_keycloak_docker,
@@ -37,6 +38,7 @@ class TestKeycloakApiClient(unittest.TestCase):
     """
 
     server = "http://localhost:8081"
+    app = None
 
     @classmethod
     def setUpClass(cls):
@@ -46,35 +48,52 @@ class TestKeycloakApiClient(unittest.TestCase):
             create_keycloak_docker()
 
     def setUp(self):
-        self.client = KeycloakAPIClient()
-
-        class _app:
-            config = {
-                "KEYCLOAK_SERVER": self.server,
-                "KEYCLOAK_REALM": "test",
-                "KEYCLOAK_CLIENT_ID": "keycloak-rest-adapter",
-                "KEYCLOAK_CLIENT_SECRET": "42ac0602-a08e-49f7-9b92-44afd622d29c",
-                "INTERNAL_DOMAINS_REGEX": r"(cern\.ch$|\.cern$|localhost$|localhost.localdomain$|127.0.0.1$|[::1]$)",
-                "EXTERNAL_SCOPE_OIDC": "external",
-                "EXTERNAL_SCOPE_SAML": "saml-external"
+        config = {
+            "KEYCLOAK_SERVER": self.server,
+            "KEYCLOAK_REALM": "test",
+            "KEYCLOAK_CLIENT_ID": "keycloak-rest-adapter",
+            "KEYCLOAK_CLIENT_SECRET": "42ac0602-a08e-49f7-9b92-44afd622d29c",
+            "INTERNAL_DOMAINS_REGEX": r"(cern\.ch$|\.cern$|localhost$|localhost.localdomain$|127.0.0.1$|[::1]$)",
+            "EXTERNAL_SCOPE_OIDC": "external",
+            "EXTERNAL_SCOPE_SAML": "saml-external",
+            "CLIENT_DEFAULTS": {
+                "openid": {
+                    "protocolMappers": [],
+                    "webOrigins": ["+"],
+                    "consentRequired": False,
+                    "defaultClientScopes": [
+                        "email",
+                    ]
+                },
+                "saml": {
+                    "protocolMappers": [],
+                    "consentRequired": False,
+                    "defaultClientScopes": [
+                        "role_list",
+                    ],
+                },
             }
-
-        self.client.init_app(_app)
+        }
+        self.app = Flask(__name__)
+        self.app.config.update(config)
+        self.client = KeycloakAPIClient()
+        self.client.init_app(self.app)
         self.client.delete_client_by_client_id(OIDC_CLIENT_ID)
         self.client.delete_client_by_client_id(SAML_ENTITY_ID)
 
     def test_create_oidc_client(self):
-        created = self.client.create_new_openid_client(
-            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
-        )
+        with self.app.app_context():
+            created = self.client.create_new_openid_client(
+                Client({"protocol": "openid", "clientId": OIDC_CLIENT_ID})
+            )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
     def test_create_saml_client_with_xml_converter(self):
         client_description = self.client.client_description_converter(SAML_DESCRIPTOR)
         self.assertIsNotNone(client_description)
         self.assertEqual("saml", client_description["protocol"])
-
-        created = self.client.create_new_client(**client_description)
+        with self.app.app_context():
+            created = self.client.create_new_client(Client(client_description))
         self.assertIsNotNone(created)
         self.assertEqual(SAML_ENTITY_ID, created["clientId"])
         self.assertListEqual(
@@ -82,9 +101,10 @@ class TestKeycloakApiClient(unittest.TestCase):
         )
 
     def test_refresh_token_oidc_client(self):
-        created = self.client.create_new_openid_client(
-            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
-        )
+        with self.app.app_context():
+            created = self.client.create_new_openid_client(
+                Client({"protocol": "openid", "clientId": OIDC_CLIENT_ID})
+            )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
         recreated_token = self.client.regenerate_client_secret(OIDC_CLIENT_ID).json()
@@ -99,9 +119,10 @@ class TestKeycloakApiClient(unittest.TestCase):
         self.assertIsNone(delete_response)
 
     def test_recreate_secret_oidc_client(self):
-        created = self.client.create_new_openid_client(
-            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
-        )
+        with self.app.app_context():
+            created = self.client.create_new_openid_client(
+                Client({"protocol": "openid", "clientId": OIDC_CLIENT_ID})
+            )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
         recreated_token = self.client.regenerate_client_secret(OIDC_CLIENT_ID).json()
@@ -111,23 +132,27 @@ class TestKeycloakApiClient(unittest.TestCase):
         self.assertEqual("secret", recreated_token["type"])
 
     def test_update_oidc_client_updates_properties(self):
-        created = self.client.create_new_openid_client(
-            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
-        )
+        with self.app.app_context():
+            created = self.client.create_new_openid_client(
+                Client({"protocol": "openid", "clientId": OIDC_CLIENT_ID})
+            )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
         description = "some new description"
-        updated = self.client.update_client_properties(
-            OIDC_CLIENT_ID, description=description
-        )
-        print(updated)
-        self.assertEqual(OIDC_CLIENT_ID, updated["clientId"])
-        self.assertEqual(description, updated["description"])
+        updated = Client(created, app=self.app)
+        updated.definition["description"] = description
+        with self.app.app_context():
+            response = self.client.update_client_properties(
+                OIDC_CLIENT_ID, updated
+            )
+        self.assertEqual(OIDC_CLIENT_ID, response.definition["clientId"])
+        self.assertEqual(description, response.definition["description"])
 
     def test_set_fine_grained_perms(self):
-        created = self.client.create_new_openid_client(
-            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
-        )
+        with self.app.app_context():
+            created = self.client.create_new_openid_client(
+                Client({"protocol": "openid", "clientId": OIDC_CLIENT_ID})
+            )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
         # act
@@ -135,9 +160,10 @@ class TestKeycloakApiClient(unittest.TestCase):
         self.assertEqual(200, response.status_code)
 
     def test_get_client_by_client_id_found(self):
-        created = self.client.create_new_openid_client(
-            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
-        )
+        with self.app.app_context():
+            created = self.client.create_new_openid_client(
+                Client({"protocol": "openid", "clientId": OIDC_CLIENT_ID})
+            )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
         # act
@@ -153,15 +179,17 @@ class TestKeycloakApiClient(unittest.TestCase):
     @unittest.skip("Throwing 500 on the latest keycloak version")
     def test_create_client_policy(self):
         # prepare
-        created = self.client.create_new_openid_client(
-            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
-        )
+        with self.app.app_context():
+            created = self.client.create_new_openid_client(
+                Client({"protocol": "openid", "clientId": OIDC_CLIENT_ID})
+            )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
         # act
-        created = self.client.create_client_policy(
-            created["id"], "test-policy", "some policy"
-        )
+        with self.app.app_context():
+            created = self.client.create_client_policy(
+                created["id"], "test-policy", "some policy"
+            )
         self.assertEqual(200, created.status_code)
 
     def test_get_auth_permission_by_name(self):
@@ -174,9 +202,10 @@ class TestKeycloakApiClient(unittest.TestCase):
 
     def test_get_all_clients(self):
         # prepare
-        created = self.client.create_new_openid_client(
-            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
-        )
+        with self.app.app_context():
+            created = self.client.create_new_openid_client(
+                Client({"protocol": "openid", "clientId": OIDC_CLIENT_ID})
+            )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
         # act
@@ -229,9 +258,10 @@ class TestKeycloakApiClient(unittest.TestCase):
 
     def test_get_client_scopes(self):
         # prepare
-        created = self.client.create_new_openid_client(
-            **{"protocol": "openid", "clientId": OIDC_CLIENT_ID}
-        )
+        with self.app.app_context():
+            created = self.client.create_new_openid_client(
+                Client({"protocol": "openid", "clientId": OIDC_CLIENT_ID})
+            )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
         # act

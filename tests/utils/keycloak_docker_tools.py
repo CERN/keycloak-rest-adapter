@@ -59,3 +59,4 @@ def create_keycloak_docker():
         print(
             f"Exception occured while starting Keycloak container. Make sure you have Docker installed and running, and that your user is allowed to access it!. Exception: {e}"
         )
+        exit()

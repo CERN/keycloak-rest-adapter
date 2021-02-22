@@ -1,6 +1,7 @@
+from model import Client
 import unittest
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 from tests.utils.tools import API_ROOT, WebTestBase
 
@@ -31,13 +32,13 @@ class TestClientDetailsApi(WebTestBase):
         self.assertTrue("data" in resp.json)
         self.assertTrue(self.client_id in resp.json["data"].casefold())
         self.keycloak_api_mock.update_client_properties.assert_called_with(
-            self.client_id, **mock_payload
+            self.client_id, ANY
         )
 
     def test_put_openid_client_ok(self):
         # prepare
         mock_payload = {"description": "test"}
-        mock_response = {"clientId": self.client_id, "description": "test"}
+        mock_response = Client({"clientId": self.client_id, "description": "test"}, app=self.app)
         self.keycloak_api_mock.update_client_properties.return_value = mock_response
 
         # act
@@ -48,9 +49,9 @@ class TestClientDetailsApi(WebTestBase):
         )
         # assert
         self.assertEqual(200, resp.status_code)
-        self.assertDictEqual(mock_response, resp.json)
+        self.assertDictEqual(mock_response.definition, resp.json)
         self.keycloak_api_mock.update_client_properties.assert_called_with(
-            self.client_id, **mock_payload
+            self.client_id, ANY
         )
 
     def test_delete_openid_client_bad_protocol(self):
