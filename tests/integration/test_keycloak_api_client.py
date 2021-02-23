@@ -192,13 +192,14 @@ class TestKeycloakApiClient(unittest.TestCase):
             )
         self.assertEqual(200, created.status_code)
 
+    @unittest.skip("No permissions enabled by default. We should enable them in the KC container so we can test for a successful response.")
     def test_get_auth_permission_by_name(self):
         # act
-        resp = self.client.get_auth_permission_by_name("test-perm")
+        resp = self.client.get_auth_permission_by_name("view.permission.client.08b7ddce-8cc2-4850-87f9-70a3a0e6b533")
 
         # assert
         self.assertIsNotNone(resp)
-        self.assertTrue("error" in resp)
+        self.assertEqual("view.permission.client.08b7ddce-8cc2-4850-87f9-70a3a0e6b533", resp[0]['name'])
 
     def test_get_all_clients(self):
         # prepare

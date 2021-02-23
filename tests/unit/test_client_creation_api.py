@@ -1,6 +1,6 @@
-import unittest
 import json
-from unittest.mock import MagicMock, ANY, patch
+from unittest.mock import ANY
+from utils import KeycloakAPIError
 
 from tests.utils.tools import API_ROOT, WebTestBase
 
@@ -142,7 +142,7 @@ class TestClientCreationApi(WebTestBase):
 
     def test_create_oidc_error_message(self):
         # prepare
-        self.keycloak_api_mock.create_new_client.return_value = {"errorMessage": "bad client"}
+        self.keycloak_api_mock.create_new_client.side_effect = KeycloakAPIError(400, "bad client")
 
         # act
         resp = self.app_client.post(
@@ -155,6 +155,9 @@ class TestClientCreationApi(WebTestBase):
         self.assertEqual(400, resp.status_code)
         self.assertTrue(
             "error creating".casefold() in resp.json["data"].casefold()
+        )
+        self.assertTrue(
+            "bad client".casefold() in resp.json["data"].casefold()
         )
 
     def test_consent_enabled_external(self):
