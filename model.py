@@ -53,6 +53,7 @@ class Client:
         self.__detect_and_assign_external_scope()
         if self.type == ClientTypes.SAML:
             self.__set_saml_signature()
+            self.__set_saml_encryption()
             self.definition["protocol"] = "saml"
         if self.type == ClientTypes.OIDC:
             self.__include_oidc_protocol_mapper()
@@ -98,6 +99,15 @@ class Client:
             is None
         ):
             self.definition["attributes"]["saml.client.signature"] = "false"
+
+    def __set_saml_encryption(self):
+        # This is the same case as with the SAML signature
+        if (
+            self.definition.get("attributes")
+            and self.definition["attributes"].get("saml.encryption.certificate")
+            is None
+        ):
+            self.definition["attributes"]["saml.encrypt"] = "false"
 
     def __redirects_outside_cern(self) -> bool:
         """ Sees whether at least one of the redirect Uris goes outside
