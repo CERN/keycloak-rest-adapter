@@ -1,6 +1,5 @@
 import logging
 from copy import deepcopy
-
 from flask import current_app, jsonify, request
 from flask_restx import Resource, fields, Api
 from model import Client, ClientTypes

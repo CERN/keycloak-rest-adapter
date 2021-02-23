@@ -1,6 +1,5 @@
 from typing import Dict
 from xml.etree import ElementTree as ET
-import logging
 from flask import make_response, jsonify, current_app
 
 JSON_MIME_TYPE = "application/json"
@@ -69,6 +68,7 @@ def validate_protocol_data(data, supported_protocols: Dict[str, str]):
 
 class ResourceNotFoundError(Exception):
     pass
+
 
 class KeycloakAPIError(Exception):
     def __init__(self, status_code, message):
