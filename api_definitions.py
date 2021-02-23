@@ -272,6 +272,10 @@ class CommonCreator(Resource):
                 return json_response(
                     "Error creating new client: {}.".format(new_client_response["errorMessage"]), 400
                 )
+            elif "error" in new_client_response:
+                return json_response(
+                    "Error creating new client: {}.".format(new_client_response["error"]), 400
+                )
             else:
                 new_client = Client(new_client_response)
                 return jsonify(new_client.definition)

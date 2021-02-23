@@ -40,8 +40,6 @@ class Client:
         self.init_app(app)
         self.logger = configure_logging()
         self.type = protocol
-        if self.internal_domains_regex is not None:
-            self.internal_domains_regex = re.compile(self.internal_domains_regex)
         if client_definition is None:
             # Allow creating stub clients with just a client_id
             self.definition = {"clientId": client_id}
@@ -112,7 +110,7 @@ class Client:
             for redirect in redirects:
                 try:
                     hostname = urlparse(redirect).hostname
-                    if not p.search(hostname):
+                    if not p.match(hostname):
                         return True
                 except (AttributeError, TypeError):
                     # Could be a native app hostname
