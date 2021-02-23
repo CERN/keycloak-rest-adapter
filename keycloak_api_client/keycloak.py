@@ -2,6 +2,7 @@
 
 import json
 import logging
+
 from model import Client, ClientTypes
 from typing import Dict, Any
 from copy import deepcopy
@@ -9,7 +10,7 @@ from copy import deepcopy
 import requests
 
 from log_utils import configure_logging
-from utils import ResourceNotFoundError
+from utils import ResourceNotFoundError, KeycloakAPIError
 
 
 class KeycloakAPIClient:
@@ -129,7 +130,18 @@ class KeycloakAPIClient:
             kwargs["headers"] = self.__get_admin_access_token_headers()
             return self.__send_authorized_request(request_type, url, **kwargs)
         else:
+            self.__handle_http_errors(ret)
             return ret
+
+    def __handle_http_errors(self, response):
+        if response.status_code not in range(200, 300):
+            data = json.loads(response.text)
+            if "errorMessage" in data:
+                raise KeycloakAPIError(status_code=response.status_code, message=data["errorMessage"])
+            elif "error" in data:
+                raise KeycloakAPIError(status_code=response.status_code, message=data["error"])
+            else:
+                raise KeycloakAPIError(status_code=response.status_code, message=response.text)
 
     def __get_admin_access_token_headers(self):
         """

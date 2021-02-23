@@ -69,3 +69,10 @@ def validate_protocol_data(data, supported_protocols: Dict[str, str]):
 
 class ResourceNotFoundError(Exception):
     pass
+
+class KeycloakAPIError(Exception):
+    def __init__(self, status_code, message):
+        obj = {"status_code": status_code, "message": message}
+        super().__init__(obj)
+        self.status_code = status_code
+        self.message = message

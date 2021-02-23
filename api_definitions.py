@@ -7,7 +7,7 @@ from model import Client, ClientTypes
 from auth import auth_lib_helper
 from keycloak_api_client.keycloak import keycloak_client
 from utils import (
-    ResourceNotFoundError,
+    KeycloakAPIError, ResourceNotFoundError,
     get_request_data,
     is_xml,
     json_response,
@@ -258,8 +258,7 @@ class CommonCreator(Resource):
             elif protocol == ClientTypes.OIDC:
                 client = Client(data, ClientTypes.OIDC)
             else:
-                return json_response("Unsupported client protocol '{}'".format(protocol), 400)
-            new_client_response = keycloak_client.create_new_client(client)
+                return json_response("Unsupported client protocol '{}' or bad definition".format(protocol), 400)
         else:
             return json_response(
                 "The request is missing '{}'. It must be passed as a json field".format(
@@ -268,21 +267,18 @@ class CommonCreator(Resource):
                 400,
             )
         try:
-            if "errorMessage" in new_client_response:
-                return json_response(
-                    "Error creating new client: {}.".format(new_client_response["errorMessage"]), 400
-                )
-            elif "error" in new_client_response:
-                return json_response(
-                    "Error creating new client: {}.".format(new_client_response["error"]), 400
-                )
-            else:
-                new_client = Client(new_client_response)
-                return jsonify(new_client.definition)
+            new_client_response = keycloak_client.create_new_client(client)
+            new_client = Client(new_client_response)
+            return jsonify(new_client.definition)
+        except KeycloakAPIError as e:
+            logging.error(f"Error creating new client: {e}")
+            return json_response(
+                f"Error creating new client: {e.message}", e.status_code
+            )
         except Exception:
             logging.exception("Unknown error creating client")
             return json_response(
-                "Unknown error creating client: {}".format(new_client_response), 500
+                "Unknown error creating client", 500
             )
 
 
@@ -340,7 +336,7 @@ class UserDetails(Resource):
             return jsonify(updated_user)
         else:
             return json_response(
-                "Cannot update '{0}' properties. Check if client exists or properties are valid".format(
+                "Cannot update '{0}' properties. Check if user exists or properties are valid".format(
                     username
                 ),
                 400,
