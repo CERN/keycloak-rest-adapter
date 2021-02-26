@@ -20,6 +20,7 @@ class Client:
     external_scope_oidc = None
     external_scope_saml = None
     client_defaults = None
+    max_string_size = 255
 
     def init_app(self, app=None):
         """Initialize the application object for this client"""
@@ -64,6 +65,8 @@ class Client:
             self.definition["redirectUris"] = []
         if "attributes" not in self.definition:
             self.definition["attributes"] = {}
+        if "description" in self.definition:  # The maximum description size is shorter in Keycloak than in the Authorization Service
+            self.__truncate_string_field("description")
 
     def update_definition(self, new_definition):
         """Update the definition. The old definition will be merged and replaced with the new values."""
@@ -178,3 +181,7 @@ class Client:
             "name": "audience",
             "protocolMapper": "oidc-audience-mapper",
         }
+
+    def __truncate_string_field(self, field_name):
+        if len(self.definition[field_name]) > self.max_string_size:
+            self.definition[field_name] = self.definition[field_name][:self.max_string_size - 2] + '..'
