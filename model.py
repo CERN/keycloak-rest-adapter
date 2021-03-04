@@ -73,7 +73,9 @@ class Client:
         is_external = False
         original_scopes = deepcopy(self.definition["defaultClientScopes"])
         for key, value in new_definition.items():
-            if key in self.definition or key == "description":
+            if key == "id": # Skip the client GUID
+                continue
+            elif key in self.definition or key == "description":
                 self.logger.debug("Changing value: {}".format(value))
                 self.definition[key] = value
             else:
