@@ -51,7 +51,6 @@ class Client:
     def adapt_definition(self):
         """Modify the client definition to adapt it to the Keycloak format"""
         self.__merge_definition_and_defaults()
-        self.__detect_and_assign_external_scope()
         if self.type == ClientTypes.SAML:
             self.__set_saml_signature()
             self.__set_saml_encryption()
@@ -70,10 +69,8 @@ class Client:
 
     def update_definition(self, new_definition):
         """Update the definition. The old definition will be merged and replaced with the new values."""
-        is_external = False
-        original_scopes = deepcopy(self.definition["defaultClientScopes"])
         for key, value in new_definition.items():
-            if key == "id": # Skip the client GUID
+            if key == "id":  # Skip the client GUID
                 continue
             elif key in self.definition or key == "description":
                 self.logger.debug("Changing value: {}".format(value))
@@ -82,18 +79,6 @@ class Client:
                 self.logger.warn(
                     "'{0}' not a valid client property. Skipping...".format(key)
                 )
-            if key == 'redirectUris':
-                is_external = self.__redirects_outside_cern()
-            if is_external:
-                self.definition['consentRequired'] = True
-                external_scope = self.external_scope_oidc
-                if self.definition['protocol'] == 'saml':
-                    external_scope = self.external_scope_saml
-                if 'defaultClientScopes' in self.definition:
-                    self.definition['defaultClientScopes'].append(external_scope)
-                    self.definition['defaultClientScopes'].extend(original_scopes)
-                else:
-                    self.definition['defaultClientScopes'] = original_scopes + [external_scope]
 
     def __set_saml_signature(self):
         # AuthnRequestsSigned attribute is not being correctly parsed by keycloak
@@ -114,7 +99,7 @@ class Client:
         ):
             self.definition["attributes"]["saml.encrypt"] = "false"
 
-    def __redirects_outside_cern(self) -> bool:
+    def __redirects_outside_cern(self) -> bool:  # TODO: Only used for the external scope, decide if we delete it
         """ Sees whether at least one of the redirect Uris goes outside
         CERN or localhost. In this case, assume that the CERN or localhost
         redirects are used for testing within CERN.
@@ -152,7 +137,7 @@ class Client:
                 output[k] = self.definition[k]
         self.definition = output
 
-    def __detect_and_assign_external_scope(self):
+    def __detect_and_assign_external_scope(self):  # TODO: Unused private method, decide if we remove it permenently
         if self.__redirects_outside_cern():
             self.definition["consentRequired"] = True
             if 'defaultClientScopes' not in self.definition:
