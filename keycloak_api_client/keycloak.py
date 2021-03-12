@@ -363,18 +363,18 @@ class KeycloakAPIClient:
         if target_scope:
             self.add_client_scope(client_id, target_scope)
 
-    def update_client_properties(self, client_id, request_client: Client) -> Client:
+    def update_client_properties(self, client_id, request_client: Client, client_type=ClientTypes.OIDC) -> Client:
         """
         Update existing client properties
         kwargs: { "property_name": "new_value", ... , }
         Returns: Updated client object
         """
         headers = self.__get_admin_access_token_headers()
-        existing_client = self.get_client_object(client_id)
+        existing_client = self.get_client_object(client_id, client_type=client_type)
 
         if existing_client:
             self.logger.info(
-                "Updating client with the following new properties: {0}".format(Client.definition)
+                "Updating client with the following new properties: {0}".format(request_client.definition)
             )
             existing_client.update_definition(request_client.definition)
             url = "{0}/admin/realms/{1}/clients/{2}".format(
@@ -391,7 +391,7 @@ class KeycloakAPIClient:
                 self.assign_default_scopes(new_scopes, original_scopes, client_id)
             if "clientId" in request_client.definition:
                 client_id = request_client.definition["clientId"]
-            updated_client = self.get_client_object(client_id)
+            updated_client = self.get_client_object(client_id, client_type=client_type)
             self.logger.info(
                 "Client '{0}' updated: {1}".format(client_id, updated_client)
             )
@@ -514,10 +514,10 @@ class KeycloakAPIClient:
             self.logger.info("Client '{0}' NOT found".format(client_id))
             return client
 
-    def get_client_object(self, client_id, realm=None) -> Client:
+    def get_client_object(self, client_id, realm=None, client_type=ClientTypes.OIDC) -> Client:
         client_definition = self.get_client_by_client_id(client_id, realm)
         if client_definition:
-            return Client(client_definition)
+            return Client(client_definition, client_type)
         else:
             return None
 
@@ -899,7 +899,7 @@ class KeycloakAPIClient:
             # See: https://www.keycloak.org/docs/latest/securing_apps/index.html#client-registration-policies
             # (Consent Required Policy) section
             update_response = self.update_client_properties(
-                client.definition["clientId"], client
+                client.definition["clientId"], client, client_type=ClientTypes.OIDC
             )
             client_secret_json = self.display_client_secret(
                 update_response.definition["clientId"]
@@ -920,7 +920,9 @@ class KeycloakAPIClient:
             # Hack in order to set consent_required to false if it's actually specified, not just ignore it
             # See: https://www.keycloak.org/docs/latest/securing_apps/index.html#client-registration-policies
             # (Consent Required Policy) section
-            return self.update_client_properties(client.definition["clientId"], client).definition
+            return self.update_client_properties(
+                client.definition["clientId"],
+                client, client_type=ClientTypes.SAML).definition
         return response.json()
 
     def create_new_client(self, client: Client) -> Dict:

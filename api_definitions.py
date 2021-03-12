@@ -173,12 +173,15 @@ class ClientDetails(Resource):
     def put(self, protocol, client_id):
         """Update a client"""
         data = get_request_data(request)
+        client_type = ClientTypes.OIDC
         if (protocol == "saml") and ("definition" in data):
             data = keycloak_client.client_description_converter(data["definition"])
             client = Client(data, ClientTypes.SAML)
+            client_type = ClientTypes.SAML
         else:
             client = Client(data, ClientTypes.OIDC)
-        updated_client = keycloak_client.update_client_properties(client_id, client)
+        updated_client = keycloak_client.update_client_properties(
+            client_id, client, client_type=client_type)
         if updated_client:
             return jsonify(updated_client.definition)
         else:
@@ -244,6 +247,7 @@ class CommonCreator(Resource):
 
         protocol = data["protocol"]
         selected_protocol_definition_key = deepcopy(self.auth_protocols[protocol])
+        client_type = ClientTypes.OIDC
 
         if selected_protocol_definition_key in data:
             if is_xml(data[selected_protocol_definition_key]):
@@ -252,6 +256,7 @@ class CommonCreator(Resource):
                     data[selected_protocol_definition_key]
                 )
                 data.pop(selected_protocol_definition_key)
+                client_type = ClientTypes.SAML
                 client = Client(client_description, ClientTypes.SAML)
 
             elif protocol == ClientTypes.OIDC:
@@ -267,7 +272,7 @@ class CommonCreator(Resource):
             )
         try:
             new_client_response = keycloak_client.create_new_client(client)
-            new_client = Client(new_client_response)
+            new_client = Client(new_client_response, client_type)
             return jsonify(new_client.definition)
         except KeycloakAPIError as e:
             logging.error(f"Error creating new client: {e}")

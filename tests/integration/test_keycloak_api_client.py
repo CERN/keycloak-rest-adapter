@@ -87,15 +87,17 @@ class TestKeycloakApiClient(unittest.TestCase):
                 Client({"protocol": "openid", "clientId": OIDC_CLIENT_ID})
             )
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
+        self.assertEqual("openid-connect", created["protocol"])
 
     def test_create_saml_client_with_xml_converter(self):
         client_description = self.client.client_description_converter(SAML_DESCRIPTOR)
         self.assertIsNotNone(client_description)
         self.assertEqual("saml", client_description["protocol"])
         with self.app.app_context():
-            created = self.client.create_new_client(Client(client_description))
+            created = self.client.create_new_client(Client(client_description, protocol="saml"))
         self.assertIsNotNone(created)
         self.assertEqual(SAML_ENTITY_ID, created["clientId"])
+        self.assertEqual("saml", created["protocol"])
         self.assertListEqual(
             ["http://cristi-nuc.cern.ch:5000/saml/acs/"], created["redirectUris"]
         )

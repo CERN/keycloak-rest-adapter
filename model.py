@@ -48,6 +48,9 @@ class Client:
             self.definition = client_definition
             self.adapt_definition()
 
+    def __str__(self):
+        return "type' :{}, definition: {}".format(self.type, self.definition)
+
     def adapt_definition(self):
         """Modify the client definition to adapt it to the Keycloak format"""
         self.__merge_definition_and_defaults()

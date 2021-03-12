@@ -32,7 +32,7 @@ class TestClientDetailsApi(WebTestBase):
         self.assertTrue("data" in resp.json)
         self.assertTrue(self.client_id in resp.json["data"].casefold())
         self.keycloak_api_mock.update_client_properties.assert_called_with(
-            self.client_id, ANY
+            self.client_id, ANY, client_type="openid"
         )
 
     def test_put_openid_client_ok(self):
@@ -51,7 +51,7 @@ class TestClientDetailsApi(WebTestBase):
         self.assertEqual(200, resp.status_code)
         self.assertDictEqual(mock_response.definition, resp.json)
         self.keycloak_api_mock.update_client_properties.assert_called_with(
-            self.client_id, ANY
+            self.client_id, ANY, client_type="openid"
         )
 
     def test_delete_openid_client_bad_protocol(self):
