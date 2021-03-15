@@ -371,10 +371,11 @@ class KeycloakAPIClient:
         """
         headers = self.__get_admin_access_token_headers()
         existing_client = self.get_client_object(client_id, client_type=client_type)
+        original_client = deepcopy(existing_client)
 
         if existing_client:
             self.logger.info(
-                "Updating client with the following new properties: {0}".format(request_client.definition)
+                "Updating client {0} with the following new properties: {1}".format(client_id, request_client.definition)
             )
             existing_client.update_definition(request_client.definition)
             url = "{0}/admin/realms/{1}/clients/{2}".format(
@@ -387,7 +388,7 @@ class KeycloakAPIClient:
             # the exsiting client, cycle through and update the scopes
             if "defaultClientScopes" in request_client.definition:
                 new_scopes = request_client.definition["defaultClientScopes"]
-                original_scopes = deepcopy(existing_client.definition["defaultClientScopes"])
+                original_scopes = deepcopy(original_client.definition["defaultClientScopes"])
                 self.assign_default_scopes(new_scopes, original_scopes, client_id)
             if "clientId" in request_client.definition:
                 client_id = request_client.definition["clientId"]
