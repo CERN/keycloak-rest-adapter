@@ -53,7 +53,6 @@ class Client:
 
     def adapt_definition(self):
         """Modify the client definition to adapt it to the Keycloak format"""
-        self.__merge_definition_and_defaults()
         if self.type == ClientTypes.SAML:
             self.__set_saml_signature()
             self.__set_saml_encryption()
@@ -82,6 +81,22 @@ class Client:
                 self.logger.warn(
                     "'{0}' not a valid client property. Skipping...".format(key)
                 )
+
+    def merge_definition_and_defaults(self):
+        """ Merges the current definition on top of the defaults, if the object is
+        a list the request object will be appended, otherwise overwritten
+        """
+        defaults = self.client_defaults[self.type]
+        output = deepcopy(defaults)
+        for k in self.definition:
+            if k in output and isinstance(self.definition[k], list):
+                tmp_set_output = set(map(json.dumps, output[k]))
+                tmp_set_definition = set(map(json.dumps, self.definition[k]))
+                tmp_set_output.update(tmp_set_definition)
+                output[k] = list(map(json.loads, tmp_set_output))
+            else:
+                output[k] = self.definition[k]
+        self.definition = output
 
     def __set_saml_signature(self):
         # AuthnRequestsSigned attribute is not being correctly parsed by keycloak
@@ -124,22 +139,6 @@ class Client:
         else:
             return False
 
-    def __merge_definition_and_defaults(self):
-        """ Merges the current definition on top of the defaults, if the object is
-        a list the request object will be appended, otherwise overwritten
-        """
-        defaults = self.client_defaults[self.type]
-        output = deepcopy(defaults)
-        for k in self.definition:
-            if k in output and isinstance(self.definition[k], list):
-                tmp_set_output = set(map(json.dumps, output[k]))
-                tmp_set_definition = set(map(json.dumps, self.definition[k]))
-                tmp_set_output.update(tmp_set_definition)
-                output[k] = list(map(json.loads, tmp_set_output))
-            else:
-                output[k] = self.definition[k]
-        self.definition = output
-
     def __detect_and_assign_external_scope(self):  # TODO: Unused private method, decide if we remove it permenently
         if self.__redirects_outside_cern():
             self.definition["consentRequired"] = True
@@ -152,7 +151,7 @@ class Client:
 
     def __include_oidc_protocol_mapper(self):
         if "protocolMappers" not in self.definition:
-            self.definition["protocolMappers"] = {}
+            self.definition["protocolMappers"] = []
         self.definition["protocolMappers"].append(
             self.__oidc_protocol_mapper()
         )
