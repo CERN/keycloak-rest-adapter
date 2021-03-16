@@ -177,7 +177,7 @@ class ClientDetails(Resource):
             client_type = ClientTypes.SAML
         else:
             client_type = ClientTypes.OIDC
-        client = Client(data, client_type)
+        client = Client(data, client_type, partial_definition=True)
         if "definition" in data:
             definition_data = keycloak_client.client_description_converter(data["definition"])
             client.update_definition(definition_data)

@@ -72,9 +72,3 @@ AUTH_AUTHORIZED_APPS = ["authorization-service-api"]
 AUTH_API_ACCESS_ROLE = "admin"
 AUTH_USER_ACTIONS_ROLE = "user"
 AUTH_USER_ACTIONS_MFA_ROLE = "user_mfa"
-
-# Internal domains (i.e. CERN & Localhost)
-INTERNAL_DOMAINS_REGEX = r"(.*\.cern\.ch$|.*\.cern$|localhost$|localhost.localdomain$|127.0.0.1$|::1$)"
-
-EXTERNAL_SCOPE_OIDC = 'external'
-EXTERNAL_SCOPE_SAML = 'saml-external'

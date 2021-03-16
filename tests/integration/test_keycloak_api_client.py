@@ -53,9 +53,6 @@ class TestKeycloakApiClient(unittest.TestCase):
             "KEYCLOAK_REALM": "test",
             "KEYCLOAK_CLIENT_ID": "keycloak-rest-adapter",
             "KEYCLOAK_CLIENT_SECRET": "42ac0602-a08e-49f7-9b92-44afd622d29c",
-            "INTERNAL_DOMAINS_REGEX": r"(cern\.ch$|\.cern$|localhost$|localhost.localdomain$|127.0.0.1$|[::1]$)",
-            "EXTERNAL_SCOPE_OIDC": "external",
-            "EXTERNAL_SCOPE_SAML": "saml-external",
             "CLIENT_DEFAULTS": {
                 "openid": {
                     "protocolMappers": [],
@@ -141,7 +138,7 @@ class TestKeycloakApiClient(unittest.TestCase):
         self.assertEqual(OIDC_CLIENT_ID, created["clientId"])
 
         description = "some new description"
-        updated = Client(created, app=self.app)
+        updated = Client(created, app=self.app, partial_definition=True)
         updated.definition["description"] = description
         with self.app.app_context():
             response = self.client.update_client_properties(

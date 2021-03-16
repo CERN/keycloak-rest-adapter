@@ -2,7 +2,6 @@
 
 import json
 import logging
-
 from model import Client, ClientTypes
 from typing import Dict, Any
 from copy import deepcopy
@@ -366,7 +365,9 @@ class KeycloakAPIClient:
     def update_client_properties(self, client_id, request_client: Client, client_type=ClientTypes.OIDC) -> Client:
         """
         Update existing client properties
-        kwargs: { "property_name": "new_value", ... , }
+        client_id: The client ID
+        request_client: A Client with a partial or full definition
+        client_type: The client type
         Returns: Updated client object
         """
         headers = self.__get_admin_access_token_headers()

@@ -1,7 +1,7 @@
 from model import Client
-import unittest
 import json
-from unittest.mock import ANY, MagicMock, patch
+from unittest.mock import ANY
+from callee.attributes import Attrs
 
 from tests.utils.tools import API_ROOT, WebTestBase
 
@@ -51,7 +51,7 @@ class TestClientDetailsApi(WebTestBase):
         self.assertEqual(200, resp.status_code)
         self.assertDictEqual(mock_response.definition, resp.json)
         self.keycloak_api_mock.update_client_properties.assert_called_with(
-            self.client_id, ANY, client_type="openid"
+            self.client_id, Attrs(definition={"description": "test", "protocol": "openid-connect"}), client_type="openid"
         )
 
     def test_delete_openid_client_bad_protocol(self):
