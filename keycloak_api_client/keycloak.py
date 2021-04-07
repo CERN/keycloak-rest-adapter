@@ -101,6 +101,9 @@ class KeycloakAPIClient:
         r_headers = deepcopy(self.headers)
         if "headers" in kwargs:
             r_headers.update(kwargs.pop("headers", None))
+        if "files" in kwargs:
+            # Request will itself set the Content-Type (with the correct boundary).
+            del r_headers['Content-Type']
 
         method = getattr(self.session, request_type.lower(), None)
         if method:
@@ -385,8 +388,21 @@ class KeycloakAPIClient:
             self.__send_request(
                 "put", url, data=json.dumps(existing_client.definition), headers=headers
             )
+
+            # Update the signing certificate.
+            signing_certificate = existing_client.get_saml_signing_certificate()
+            existing_signing_certificate = original_client.get_saml_signing_certificate()
+            if signing_certificate != existing_signing_certificate and signing_certificate is not None:
+                self._update_client_certificate(existing_client.definition["id"], 'saml.signing', headers, signing_certificate)
+
+            # Update the encryption certificate.
+            encryption_certificate = existing_client.get_saml_encryption_certificate()
+            existing_encryption_certificate = original_client.get_saml_encryption_certificate()
+            if encryption_certificate != existing_encryption_certificate and encryption_certificate is not None:
+                self._update_client_certificate(existing_client.definition["id"], 'saml.encryption', headers, encryption_certificate)
+
             # If default scopes are in the request client and are different to the ones in
-            # the exsiting client, cycle through and update the scopes
+            # the existing client, cycle through and update the scopes
             if "defaultClientScopes" in request_client.definition:
                 new_scopes = request_client.definition["defaultClientScopes"]
                 original_scopes = deepcopy(original_client.definition["defaultClientScopes"])
@@ -1216,6 +1232,22 @@ class KeycloakAPIClient:
             webauthn_preferred,
             webauthn_credential_id,
             webauthn_must_initialize,
+        )
+
+    def _update_client_certificate(self, client_id, attr, headers, certificate):
+        url = "{0}/admin/realms/{1}/clients/{2}/certificates/{3}/upload".format(
+            self.base_url, self.realm, client_id, attr
+        )
+
+        data = {
+            'file': certificate,
+            "keystoreFormat": "Certificate PEM"
+        }
+
+        # The 'files' attribute sets the request content to 'multipart/form-data',
+        # which is a requirement from the Keycloak API.
+        self.__send_request(
+            "post", url, files=data, headers=headers
         )
 
 

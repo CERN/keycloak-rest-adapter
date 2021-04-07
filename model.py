@@ -51,8 +51,8 @@ class Client:
         """Modify the client definition to adapt it to the Keycloak format"""
         if self.type == ClientTypes.SAML:
             self.definition["protocol"] = "saml"
-            self.__set_saml_signature()
-            self.__set_saml_encryption()
+            self.__set_default_saml_signature()
+            self.__set_default_saml_encryption()
         if self.type == ClientTypes.OIDC:
             self.definition["protocol"] = "openid-connect"
             if not self.partial_definition:
@@ -71,13 +71,17 @@ class Client:
         for key, value in new_definition.items():
             if key == "id":  # Skip the client GUID
                 continue
-            elif key in self.definition or key == "description":
+            elif key in self.definition or key in ["description", "attributes"]:
                 self.logger.debug("Changing value: {}".format(value))
                 self.definition[key] = value
             else:
                 self.logger.warn(
                     "'{0}' not a valid client property. Skipping...".format(key)
                 )
+        # This will set the SAML certificate and encryption fields to false, if they are not provided.
+        if self.type == ClientTypes.SAML:
+            self.__set_default_saml_signature()
+            self.__set_default_saml_encryption()
 
     def merge_definition_and_defaults(self):
         """ Merges the current definition on top of the defaults, if the object is
@@ -95,7 +99,19 @@ class Client:
                 output[k] = self.definition[k]
         self.definition = output
 
-    def __set_saml_signature(self):
+    def get_saml_signing_certificate(self):
+        if self.definition.get("attributes"):
+            return self.definition["attributes"].get("saml.signing.certificate")
+        else:
+            return None
+
+    def get_saml_encryption_certificate(self):
+        if self.definition.get("attributes"):
+            return self.definition["attributes"].get("saml.encryption.certificate")
+        else:
+            return None
+
+    def __set_default_saml_signature(self):
         # AuthnRequestsSigned attribute is not being correctly parsed by keycloak
         # If there is no signing certificate, set the clientCertificateRequired attribute to False
         if (
@@ -105,7 +121,7 @@ class Client:
         ):
             self.definition["attributes"]["saml.client.signature"] = "false"
 
-    def __set_saml_encryption(self):
+    def __set_default_saml_encryption(self):
         # This is the same case as with the SAML signature
         if (
             self.definition.get("attributes")
