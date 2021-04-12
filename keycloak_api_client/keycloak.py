@@ -1185,20 +1185,27 @@ class KeycloakAPIClient:
         username: users's username in Keycloak
         required_action_type: string that matches the action type, e.g. "CONFIGURE_TOTP"
         credential_type: string that matches the 'type' attribute, e.g. "otp"
-        :return: Boolean
+        :return: enabled (Boolean), requires_init (Boolean)
         """
         user = self.get_user_by_username(username, self.mfa_realm)
+        requires_init, enabled = False, False
         required_actions = user["requiredActions"]
         if required_action_type in required_actions:
-            return True
+            requires_init = True
+            enabled = True
         _, credentials = self.get_user_id_and_credentials(username)
         for credential in credentials:
             if credential["type"] == credential_type:
-                return True
-        return False
+                enabled = True
+        return enabled, requires_init
 
-    # TODO: only return the credential ID
     def get_credential(self, credentials, credential_type):
+        """
+        Returns the credential pereferred state, initialization status, and credential ID.
+        credentials: the list of credentials
+        credential_type: string that matches the 'type' attribute, e.g. "otp"
+        :return: preferred (Boolean), must_initialize (Boolean), credential ID (UUID or None)
+        """
         for index, credential in enumerate(credentials):
             if credential["type"] == credential_type:
                 # Keycloak always sets the index of preferred login method to '0'.

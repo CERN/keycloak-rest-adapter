@@ -417,8 +417,8 @@ class OTP(Resource):
     def get(self, username):
         """Gets status of OTP credentials for a user"""
         try:
-            is_enabled = is_otp_enabled(keycloak_client, username)
-            return json_response({"enabled": is_enabled})
+            is_enabled, initialization_required = is_otp_enabled(keycloak_client, username)
+            return json_response({"enabled": is_enabled, "initialization_required": initialization_required})
         except ResourceNotFoundError as e:
             return str(e), 404
 
@@ -426,7 +426,7 @@ class OTP(Resource):
     def post(self, username):
         """Enables OTP credentials for a user"""
         try:
-            is_enabled = is_otp_enabled(keycloak_client, username)
+            is_enabled, _ = is_otp_enabled(keycloak_client, username)
         except ResourceNotFoundError as e:
             return str(e), 404
 
@@ -440,8 +440,8 @@ class OTP(Resource):
     def delete(self, username):
         """Disables and removes OTP credentials for a user"""
         try:
-            otp_enabled = is_otp_enabled(keycloak_client, username)
-            webauthn_enabled = is_webauthn_enabled(keycloak_client, username)
+            otp_enabled, _ = is_otp_enabled(keycloak_client, username)
+            webauthn_enabled, _ = is_webauthn_enabled(keycloak_client, username)
         except ResourceNotFoundError as e:
             return str(e), 404
         if not otp_enabled:
@@ -461,7 +461,7 @@ class OTPReset(Resource):
     def post(self, username):
         """Enables and resets OTP credentials for a user"""
         try:
-            is_enabled = is_otp_enabled(keycloak_client, username)
+            is_enabled, _ = is_otp_enabled(keycloak_client, username)
         except ResourceNotFoundError as e:
             return str(e), 404
         if is_enabled:
@@ -476,8 +476,8 @@ class WebAuthn(Resource):
     def get(self, username):
         """Gets status of WebAuthn credentials for a user"""
         try:
-            is_enabled = is_webauthn_enabled(keycloak_client, username)
-            return json_response({"enabled": is_enabled})
+            is_enabled, initialization_required = is_webauthn_enabled(keycloak_client, username)
+            return json_response({"enabled": is_enabled, "initialization_required": initialization_required})
         except ResourceNotFoundError as e:
             return str(e), 404
 
@@ -485,7 +485,7 @@ class WebAuthn(Resource):
     def post(self, username):
         """Enables WebAuthn credentials for a user"""
         try:
-            is_enabled = is_webauthn_enabled(keycloak_client, username)
+            is_enabled, _ = is_webauthn_enabled(keycloak_client, username)
         except ResourceNotFoundError as e:
             return str(e), 404
         if not is_enabled:
@@ -498,8 +498,8 @@ class WebAuthn(Resource):
     def delete(self, username):
         """Disables and removes WebAuthn credentials for a user"""
         try:
-            otp_enabled = is_otp_enabled(keycloak_client, username)
-            webauthn_enabled = is_webauthn_enabled(keycloak_client, username)
+            otp_enabled, _ = is_otp_enabled(keycloak_client, username)
+            webauthn_enabled, _ = is_webauthn_enabled(keycloak_client, username)
         except ResourceNotFoundError as e:
             return str(e), 404
         if not webauthn_enabled:
@@ -519,7 +519,7 @@ class WebAuthnReset(Resource):
     def post(self, username):
         """Enables and resets WebAuthn credentials for a user"""
         try:
-            is_enabled = is_webauthn_enabled(keycloak_client, username)
+            is_enabled, _ = is_webauthn_enabled(keycloak_client, username)
         except ResourceNotFoundError as e:
             return str(e), 404
         if is_enabled:

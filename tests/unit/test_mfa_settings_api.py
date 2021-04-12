@@ -133,14 +133,14 @@ class TestUserEndpointsApi(WebTestBase):
 
     def test_get_otp_settings_ok(self):
         # prepare
-        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = True
+        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = True, False
 
         # act
         resp = self.app_client.get(self._get_otp_endpoint())
 
         # assert
         self.assertEqual(200, resp.status_code)
-        self.assertDictEqual({"enabled": True}, resp.json["data"])
+        self.assertDictEqual({"enabled": True, "initialization_required": False}, resp.json["data"])
         self.keycloak_api_mock.is_credential_enabled_for_user.assert_called_with(
             self.user_id, REQUIRED_ACTION_CONFIGURE_OTP, CREDENTIAL_TYPE_OTP
         )
@@ -160,7 +160,7 @@ class TestUserEndpointsApi(WebTestBase):
 
     def test_post_otp_settings_not_enabled(self):
         # prepare
-        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = False
+        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = False, False
 
         # act
         resp = self.app_client.post(self._get_otp_endpoint())
@@ -175,7 +175,7 @@ class TestUserEndpointsApi(WebTestBase):
     def test_post_otp_settings_not_enabled_user_mfa_auth(self):
         # prepare
         self._mock_user_auth(True)
-        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = False
+        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = False, False
 
         # act
         resp = self.app_client.post(self._get_otp_endpoint())
@@ -219,7 +219,7 @@ class TestUserEndpointsApi(WebTestBase):
 
     def test_post_otp_settings_already_enabled(self):
         # prepare
-        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = True
+        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = True, False
 
         # act
         resp = self.app_client.post(self._get_otp_endpoint())
@@ -247,8 +247,8 @@ class TestUserEndpointsApi(WebTestBase):
     def test_delete_otp_settings_not_enabled(self):
         # prepare
         self.keycloak_api_mock.is_credential_enabled_for_user.side_effect = [
-            False,
-            False,
+            (False, False),
+            (False, False),
         ]
 
         # act
@@ -271,8 +271,8 @@ class TestUserEndpointsApi(WebTestBase):
     def test_delete_otp_settings_already_enabled_no_webauthn(self):
         # prepare
         self.keycloak_api_mock.is_credential_enabled_for_user.side_effect = [
-            True,
-            False,
+            (True, False),
+            (False, False),
         ]
 
         # act
@@ -297,8 +297,10 @@ class TestUserEndpointsApi(WebTestBase):
 
     def test_delete_otp_settings_already_enabled_and_webauthn_enabled(self):
         # prepare
-        self.keycloak_api_mock.is_credential_enabled_for_user.side_effect = [True, True]
-
+        self.keycloak_api_mock.is_credential_enabled_for_user.side_effect = [
+            (True, False),
+            (True, False),
+        ]
         # act
         resp = self.app_client.delete(self._get_otp_endpoint())
 
@@ -333,7 +335,7 @@ class TestUserEndpointsApi(WebTestBase):
 
     def test_reset_otp_is_enabled_needs_reset(self):
         # prepare
-        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = True
+        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = True, False
         # act
         resp = self.app_client.post(self._get_otp_reset_endpoint())
 
@@ -348,7 +350,7 @@ class TestUserEndpointsApi(WebTestBase):
 
     def test_reset_otp_is_enabled_not_enabled(self):
         # prepare
-        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = False
+        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = False, False
         # act
         resp = self.app_client.post(self._get_otp_reset_endpoint())
 
@@ -378,14 +380,14 @@ class TestUserEndpointsApi(WebTestBase):
 
     def test_get_webauthn_settings_ok(self):
         # prepare
-        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = True
+        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = True, False
 
         # act
         resp = self.app_client.get(self._get_webauthn_endpoint())
 
         # assert
         self.assertEqual(200, resp.status_code)
-        self.assertDictEqual({"enabled": True}, resp.json["data"])
+        self.assertDictEqual({"enabled": True, "initialization_required": False}, resp.json["data"])
         self.keycloak_api_mock.is_credential_enabled_for_user.assert_called_with(
             self.user_id, REQUIRED_ACTION_WEBAUTHN_REGISTER, CREDENTIAL_TYPE_WEBAUTHN
         )
@@ -405,7 +407,7 @@ class TestUserEndpointsApi(WebTestBase):
 
     def test_post_webauthn_settings_not_enabled(self):
         # prepare
-        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = False
+        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = False, False
 
         # act
         resp = self.app_client.post(self._get_webauthn_endpoint())
@@ -419,7 +421,7 @@ class TestUserEndpointsApi(WebTestBase):
 
     def test_post_webauthn_settings_already_enabled(self):
         # prepare
-        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = True
+        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = True, False
 
         # act
         resp = self.app_client.post(self._get_webauthn_endpoint())
@@ -447,9 +449,10 @@ class TestUserEndpointsApi(WebTestBase):
     def test_delete_webauthn_settings_not_enabled(self):
         # prepare
         self.keycloak_api_mock.is_credential_enabled_for_user.side_effect = [
-            False,
-            False,
+            (False, False),
+            (False, False),
         ]
+        # self.keycloak_api_mock.is_credential_enabled_for_user.return_value = (True, False)
 
         # act
         resp = self.app_client.delete(self._get_webauthn_endpoint())
@@ -471,8 +474,8 @@ class TestUserEndpointsApi(WebTestBase):
     def test_delete_webauthn_settings_already_enabled_no_webauthn(self):
         # prepare
         self.keycloak_api_mock.is_credential_enabled_for_user.side_effect = [
-            False,
-            True,
+            (False, False),
+            (True, False),
         ]
 
         # act
@@ -497,7 +500,10 @@ class TestUserEndpointsApi(WebTestBase):
 
     def test_delete_webauthn_settings_already_enabled_and_webauthn_enabled(self):
         # prepare
-        self.keycloak_api_mock.is_credential_enabled_for_user.side_effect = [True, True]
+        self.keycloak_api_mock.is_credential_enabled_for_user.side_effect = [
+            (True, False),
+            (True, False),
+        ]
 
         # act
         resp = self.app_client.delete(self._get_webauthn_endpoint())
@@ -533,7 +539,7 @@ class TestUserEndpointsApi(WebTestBase):
 
     def test_reset_webauthn_is_enabled_needs_reset(self):
         # prepare
-        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = True
+        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = True, False
         # act
         resp = self.app_client.post(self._get_webauthn_reset_endpoint())
 
@@ -550,7 +556,7 @@ class TestUserEndpointsApi(WebTestBase):
 
     def test_reset_webauthn_is_enabled_not_enabled(self):
         # prepare
-        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = False
+        self.keycloak_api_mock.is_credential_enabled_for_user.return_value = False, False
         # act
         resp = self.app_client.post(self._get_webauthn_reset_endpoint())
 
