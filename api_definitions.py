@@ -396,14 +396,14 @@ class MfaSettings(Resource):
                         "preferred": otp_preferred,
                         "initialization_required": otp_must_initialize,
                         "credential_id": otp_credential_id,
-                        "text": "WebAuthn (e.g. Yubikey)",
+                        "text": "OTP (One Time Password)",
                     },
                     "webauthn": {
                         "enabled": webauthn_enabled,
                         "preferred": webauthn_preferred,
                         "initialization_required": webauthn_must_initialize,
                         "credential_id": webauthn_credential_id,
-                        "text": "OTP (One Time Password)",
+                        "text": "WebAuthn (e.g. Yubikey)",
                     },
                 }
             )
