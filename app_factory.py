@@ -91,8 +91,8 @@ def create_app() -> Flask:
     CORS(app)
     app.url_map.strict_slashes = False
     app.config.from_object("default_adapter_config")
-    app.logger = configure_logging(app.config["LOG_DIR"])
     read_env_config(app)
+    app.logger = configure_logging(app.config["LOG_DIR"])
 
     # Configuration
     configure_keycloak_dependent_variables(app)
