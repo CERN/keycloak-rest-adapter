@@ -29,6 +29,7 @@ class KeycloakAPIClient:
             app.config["KEYCLOAK_REALM"],
             app.config["KEYCLOAK_CLIENT_ID"],
             app.config["KEYCLOAK_CLIENT_SECRET"],
+            app.config["LOG_DIR"]
         )
 
     def __initialize(
@@ -37,6 +38,7 @@ class KeycloakAPIClient:
         realm,
         client_id,
         client_secret,
+        log_dir,
         master_realm="master",
         mfa_realm="mfa",
     ):
@@ -55,6 +57,9 @@ class KeycloakAPIClient:
         self.client_secret = client_secret
         self.master_realm = master_realm
         self.mfa_realm = mfa_realm
+        self.log_dir = log_dir
+
+        self.logger = configure_logging(self.log_dir)
 
         self.base_url = "{}/auth".format(self.keycloak_server)
         self.logger.info(
@@ -80,10 +85,9 @@ class KeycloakAPIClient:
         self.client_secret = None
         self.master_realm = None
         self.mfa_realm = None
-
         self.base_url = None
         self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        self.logger = configure_logging()
+
         # Persistent SSL configuration
         # http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
         self.session = requests.Session()

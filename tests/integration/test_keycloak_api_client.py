@@ -69,7 +69,8 @@ class TestKeycloakApiClient(unittest.TestCase):
                         "role_list",
                     ],
                 },
-            }
+            },
+            "LOG_DIR": "/tmp"
         }
         self.app = Flask(__name__)
         self.app.config.update(config)

@@ -28,6 +28,8 @@ objects:
         OAUTH_HTTPS_SWAGGER = True
         SWAGGER_UI_OAUTH_REDIRECT_URL = "${ROUTE_HOSTNAME}/oauth2-redirect.html"
 
+        LOG_DIR = "/var/log/keycloak-rest-adapter/"
+
   - apiVersion: v1
     kind: ConfigMap
     metadata:

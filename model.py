@@ -24,6 +24,7 @@ class Client:
         if app is None:
             app = current_app
         self.client_defaults = app.config["CLIENT_DEFAULTS"]
+        self.logger = configure_logging(app.config["LOG_DIR"])
 
     def __init__(self, client_definition=None, protocol=ClientTypes.OIDC, client_id=None, app=None, partial_definition=False):
         """Constructor. Keyword arguments:
@@ -34,7 +35,6 @@ class Client:
                 - partial_definition: when set to True, the empty fields won't be initialized. This is used for updating existing clients.
         """
         self.init_app(app)
-        self.logger = configure_logging()
         self.type = protocol
         self.partial_definition = partial_definition
         if client_definition is None:
@@ -75,7 +75,7 @@ class Client:
                 self.logger.debug("Changing value: {}".format(value))
                 self.definition[key] = value
             else:
-                self.logger.warn(
+                self.logger.warning(
                     "'{0}' not a valid client property. Skipping...".format(key)
                 )
         # This will set the SAML certificate and encryption fields to false, if they are not provided.

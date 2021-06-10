@@ -72,3 +72,6 @@ AUTH_AUTHORIZED_APPS = ["authorization-service-api"]
 AUTH_API_ACCESS_ROLE = "admin"
 AUTH_USER_ACTIONS_ROLE = "user"
 AUTH_USER_ACTIONS_MFA_ROLE = "user_mfa"
+
+# Log config
+LOG_DIR = "/tmp"
