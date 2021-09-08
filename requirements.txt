@@ -1,7 +1,7 @@
 Flask==1.1.1
 gunicorn>=19.5.0
 requests==2.23.*
-flask-restx==0.2.0
+flask-restx==0.5.1
 # From urllib3 docs: urllib3 (requests) will try to load the default system certificate stores
 # The most reliable cross-platform method is to use the certifi package which provides Mozilla's root certificate bundle
 certifi==2019.11.28
