@@ -50,7 +50,10 @@ CLIENT_DEFAULTS = {
             "address",
             "offline_access",
             "phone",
-        ]
+        ],
+        "attributes": {
+            "use.refresh.tokens": False
+        }
     },
     "saml": {
         "protocolMappers": [],

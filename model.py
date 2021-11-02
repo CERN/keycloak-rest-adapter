@@ -85,7 +85,7 @@ class Client:
 
     def merge_definition_and_defaults(self):
         """ Merges the current definition on top of the defaults, if the object is
-        a list the request object will be appended, otherwise overwritten
+        a list or dict the request object will be appended, otherwise overwritten
         """
         defaults = self.client_defaults[self.type]
         output = deepcopy(defaults)
@@ -95,6 +95,8 @@ class Client:
                 tmp_set_definition = set(map(json.dumps, self.definition[k]))
                 tmp_set_output.update(tmp_set_definition)
                 output[k] = list(map(json.loads, tmp_set_output))
+            elif k in output and isinstance(self.definition[k], dict):
+                output[k].update(self.definition[k])
             else:
                 output[k] = self.definition[k]
         self.definition = output
