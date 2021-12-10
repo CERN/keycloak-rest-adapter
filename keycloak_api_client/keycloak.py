@@ -963,7 +963,7 @@ class KeycloakAPIClient:
         if not realm:
             realm = self.realm
         headers = self.__get_admin_access_token_headers()
-        url = "{0}/admin/realms/{1}/users?first=0&max=100&username={2}".format(
+        url = "{0}/admin/realms/{1}/users?first=0&max=1&username={2}".format(
             self.base_url, realm, username
         )
 
