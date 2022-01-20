@@ -11,6 +11,7 @@ variables:
   KEYCLOAK_REALM_QA: cern
   KEYCLOAK_REALM_DEV: cern
   OPENSHIFT_SERVER_PROD: https://openshift.cern.ch
+  OPENSHIFT_SERVER_QA: https://api.paas.okd.cern.ch
   OPENSHIFT_SERVER_DEV: https://api.paas.okd.cern.ch
   BUILD_ENV_DEV: staging
   BUILD_ENV_PROD: production
@@ -139,7 +140,7 @@ deploy_qa:
     CLIENT_SECRET: ${CLIENT_SECRET_QA}
     ENVIRONMENT: qa
     TOKEN: ${OPENSHIFT_QA_TOKEN}
-    OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_PROD}
+    OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_QA}
     NAMESPACE: ${NAMESPACE_QA}
     TAG: ${QA_TAG}
     ROUTE_HOSTNAME: https://${NAMESPACE_QA}.web.cern.ch
