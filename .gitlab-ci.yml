@@ -10,7 +10,7 @@ variables:
   KEYCLOAK_REALM_PROD: cern
   KEYCLOAK_REALM_QA: cern
   KEYCLOAK_REALM_DEV: cern
-  OPENSHIFT_SERVER_PROD: https://openshift.cern.ch
+  OPENSHIFT_SERVER_PROD: https://api.paas.okd.cern.ch
   OPENSHIFT_SERVER_QA: https://api.paas.okd.cern.ch
   OPENSHIFT_SERVER_DEV: https://api.paas.okd.cern.ch
   BUILD_ENV_DEV: staging
