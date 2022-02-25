@@ -70,7 +70,8 @@ class TestKeycloakApiClient(unittest.TestCase):
                     ],
                 },
             },
-            "LOG_DIR": "/tmp"
+            "LOG_DIR": "/tmp",
+            "MFA_MIGRATED_ROLE": "2fa-migrated"
         }
         self.app = Flask(__name__)
         self.app.config.update(config)

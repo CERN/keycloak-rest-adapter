@@ -29,7 +29,8 @@ class KeycloakAPIClient:
             app.config["KEYCLOAK_REALM"],
             app.config["KEYCLOAK_CLIENT_ID"],
             app.config["KEYCLOAK_CLIENT_SECRET"],
-            app.config["LOG_DIR"]
+            app.config["LOG_DIR"],
+            mfa_migrated_role=app.config["MFA_MIGRATED_ROLE"],
         )
 
     def __initialize(
@@ -39,6 +40,7 @@ class KeycloakAPIClient:
         client_id,
         client_secret,
         log_dir,
+        mfa_migrated_role,
         master_realm="master",
         mfa_realm="mfa",
     ):
@@ -58,6 +60,7 @@ class KeycloakAPIClient:
         self.master_realm = master_realm
         self.mfa_realm = mfa_realm
         self.log_dir = log_dir
+        self.mfa_migrated_role = mfa_migrated_role
 
         self.logger = configure_logging(self.log_dir)
 
@@ -1009,37 +1012,20 @@ class KeycloakAPIClient:
             )
             return
 
-    # TBM: methods that call this usually have a `realm` parameter, but here the
-    # realm is hardcoded.
-    def get_user_id_and_credentials(self, username):
-        """
-        Gets user ID and credentials
-        username: user's username in Keycloak
-        """
-        headers = self.__get_admin_access_token_headers()
-        user = self.get_user_by_username(username, self.mfa_realm)
-        url = "{0}/admin/realms/{1}/users/{2}/credentials".format(
-            self.base_url, self.mfa_realm, user["id"]
-        )
-        ret = self.__send_request("get", url, headers=headers)
-        self.logger.info("Getting credentials for user '{0}'".format(username))
-        credentials = json.loads(ret.text)
-        return user["id"], credentials
-
     def get_user_and_mfa_credentials(self, username):
         """
         Gets user and credentials
         username: user's username in Keycloak
         """
         headers = self.__get_admin_access_token_headers()
-        user = self.get_user_by_username(username, self.mfa_realm)
+        user, realm = self.get_mfa_user_and_realm(username)
         url = "{0}/admin/realms/{1}/users/{2}/credentials".format(
-            self.base_url, self.mfa_realm, user["id"]
+            self.base_url, realm, user["id"]
         )
         ret = self.__send_request("get", url, headers=headers)
         self.logger.info("Getting credentials for user '{0}'".format(username))
         credentials = json.loads(ret.text)
-        return user, credentials
+        return user, credentials, realm
 
     def update_user_preferred_credential_by_id(self, username, credential_id):
         """
@@ -1050,9 +1036,9 @@ class KeycloakAPIClient:
         credential_id: UUID of the credential
         """
         headers = self.__get_admin_access_token_headers()
-        user = self.get_user_by_username(username, self.mfa_realm)
+        user, realm = self.get_mfa_user_and_realm(username)
         url = "{0}/admin/realms/{1}/users/{2}/credentials/{3}/moveToFirst".format(
-            self.base_url, self.mfa_realm, user["id"], credential_id
+            self.base_url, realm, user["id"], credential_id
         )
         ret = self.__send_request("post", url, headers=headers)
         self.logger.info(
@@ -1062,7 +1048,7 @@ class KeycloakAPIClient:
         )
         return ret
 
-    def delete_user_credential_by_id(self, user_id, credential_id):
+    def delete_user_credential_by_id(self, user_id, credential_id, realm):
         """
         Deletes user credential by user_id and credential_id
         user_id: user's UUID in Keylcoak
@@ -1070,7 +1056,7 @@ class KeycloakAPIClient:
         """
         headers = self.__get_admin_access_token_headers()
         url = "{0}/admin/realms/{1}/users/{2}/credentials/{3}".format(
-            self.base_url, self.mfa_realm, user_id, credential_id
+            self.base_url, realm, user_id, credential_id
         )
         ret = self.__send_request("delete", url, headers=headers)
         self.logger.info(
@@ -1086,10 +1072,10 @@ class KeycloakAPIClient:
         username: users's username in Keycloak
         credential_type: string that matches the 'type' attribute, e.g. "otp"
         """
-        user_id, credentials = self.get_user_id_and_credentials(username)
+        user, credentials, realm = self.get_user_and_mfa_credentials(username)
         for credential in credentials:
             if credential["type"] == credential_type:
-                self.delete_user_credential_by_id(user_id, credential["id"])
+                self.delete_user_credential_by_id(user["id"], credential["id"], realm)
         return
 
     def delete_user_required_action_if_exists(self, username, required_action):
@@ -1098,14 +1084,14 @@ class KeycloakAPIClient:
         username: users's username in Keycloak
         required_action: string that matches the action type, e.g. "CONFIGURE_TOTP"
         """
-        user = self.get_user_by_username(username, self.mfa_realm)
+        user, realm = self.get_mfa_user_and_realm(username)
         required_actions = user["requiredActions"]
         try:
             required_actions.remove(required_action)
         except Exception:
             logging.error("Exception caught trying to remove user['requiredActions']")
         self.update_user_properties(
-            username, self.mfa_realm, requiredActions=required_actions
+            username, realm, requiredActions=required_actions
         )
 
     def create_user(self, username, realm=None):
@@ -1142,11 +1128,11 @@ class KeycloakAPIClient:
         Sets up a required action to configure OTP for a user
         username: users's username in Keycloak
         """
-        user = self.get_user_by_username(username, self.mfa_realm)
+        user, realm = self.get_mfa_user_and_realm(username)
         required_actions = user["requiredActions"]
         required_actions.append(self.REQUIRED_ACTION_CONFIGURE_OTP)
         self.update_user_properties(
-            username, self.mfa_realm, requiredActions=required_actions
+            username, realm, requiredActions=required_actions
         )
 
     def enable_webauthn_for_user(self, username):
@@ -1154,11 +1140,11 @@ class KeycloakAPIClient:
         Sets up a required action to configure WebAuthn for a user
         username: users's username in Keycloak
         """
-        user = self.get_user_by_username(username, self.mfa_realm)
+        user, realm = self.get_mfa_user_and_realm(username)
         required_actions = user["requiredActions"]
         required_actions.append(self.REQUIRED_ACTION_WEBAUTHN_REGISTER)
         self.update_user_properties(
-            username, self.mfa_realm, requiredActions=required_actions
+            username, realm, requiredActions=required_actions
         )
 
     def disable_otp_for_user(self, username):
@@ -1191,13 +1177,12 @@ class KeycloakAPIClient:
         credential_type: string that matches the 'type' attribute, e.g. "otp"
         :return: enabled (Boolean), requires_init (Boolean)
         """
-        user = self.get_user_by_username(username, self.mfa_realm)
+        user, credentials, _ = self.get_user_and_mfa_credentials(username)
         requires_init, enabled = False, False
         required_actions = user["requiredActions"]
         if required_action_type in required_actions:
             requires_init = True
             enabled = True
-        _, credentials = self.get_user_id_and_credentials(username)
         for credential in credentials:
             if credential["type"] == credential_type:
                 enabled = True
@@ -1219,7 +1204,7 @@ class KeycloakAPIClient:
         return False, False, None
 
     def get_user_mfa_settings(self, username):
-        user, credentials = self.get_user_and_mfa_credentials(username)
+        user, credentials, _ = self.get_user_and_mfa_credentials(username)
         otp_must_initialize = (
             self.REQUIRED_ACTION_CONFIGURE_OTP in user["requiredActions"]
         )
@@ -1260,6 +1245,25 @@ class KeycloakAPIClient:
         self.__send_request(
             "post", url, files=data, headers=headers
         )
+
+    def _is_user_migrated_by_id(self, user_id):
+        url = "{0}/admin/realms/{1}/users/{2}/role-mappings/realm".format(
+            self.base_url, self.mfa_realm, user_id
+        )
+        response = self.__send_request("get", url, headers=self.headers)
+        response_json = response.json()
+        if isinstance(response_json, list):
+            role_names = map(lambda list_obj: list_obj["name"], response_json)
+            return self.mfa_migrated_role in role_names
+        else:
+            return False
+
+    def get_mfa_user_and_realm(self, username):
+        mfa_user = self.get_user_by_username(username, self.mfa_realm)
+        if self._is_user_migrated_by_id(mfa_user["id"]):
+            return self.get_user_by_username(username, self.realm), self.realm
+        else:
+            return mfa_user, self.mfa_realm
 
 
 keycloak_client: KeycloakAPIClient = KeycloakAPIClient()

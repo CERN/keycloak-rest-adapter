@@ -75,3 +75,6 @@ AUTH_USER_ACTIONS_MFA_ROLE = "user_mfa"
 
 # Log config
 LOG_DIR = "/tmp"
+
+# Always-on 2FA migration role
+MFA_MIGRATED_ROLE = "2fa-migrated"
