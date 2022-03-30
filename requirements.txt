@@ -10,3 +10,4 @@ flask_cors==3.0.*
 authlib-helpers==1.0.3
 python-dotenv==0.12.0
 itsdangerous==2.0.1
+jinja2==3.0.3
