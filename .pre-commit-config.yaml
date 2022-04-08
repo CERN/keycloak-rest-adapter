@@ -13,4 +13,12 @@ repos:
     rev: '3.8.4'
     hooks:
     -   id: flake8
-
+-   repo: local
+    hooks:
+    -   id: deps-check
+        name: deps-check
+        entry: bash -c 'PIP_CONFIG_FILE=pip.conf pip-compile --quiet'
+        language: system
+        types: [file]
+        files: ^requirements.*$
+        pass_filenames: true

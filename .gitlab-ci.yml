@@ -1,4 +1,4 @@
-image: python:3.8-slim
+image: gitlab-registry.cern.ch/authzsvc/docker-images/python-base:3.8
 variables:
   CLIENT_ID: keycloak-rest-adapter
   NAMESPACE_DEV: test-keycloak-rest-adapter
@@ -22,7 +22,7 @@ variables:
   APP_NAME: ${CI_PROJECT_NAME}
 
 stages:
-  - lint
+  - lint_verify_deps
   - test
   - build_docker
   - deploy
@@ -54,13 +54,16 @@ stages:
     - oc tag "gitlab-registry.cern.ch/${LOWERCASE_PATH}:${TAG}" "${APP_NAME}:latest" --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
 
 ### Linting
-flake8:
-  image: python:3.8-alpine
-  stage: lint
+flake8_verify_deps:
+  stage: lint_verify_deps
   before_script:
     - pip install -r dev-requirements.txt
+    - pip install pip-tools
+    - apt-get -y update
+    - apt-get -y -qq install git
   script:
     - python -m flake8 *.py keycloak_api_client
+    - PIP_CONFIG_FILE=$(pwd)/pip.conf pip-compile --quiet && git diff --exit-code requirements.txt
   allow_failure: true
 
 ### Testing

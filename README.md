@@ -44,6 +44,17 @@ export KEYCLOAK_REST_ADAPTER_CONFIG=/opt/config/keycloak-overrides.py
 
 # Development
 
+## Setting up the environment
+
+Run the `activate.sh` script using this command. It will create a virtualenv
+and install all the project dependencies.
+
+```bash
+source activate.sh
+```
+
+> Note: this project uses `pip-compile` to generate the requirements.txt file. It should not be edited manually!
+
 ## Running locally
 
 In order to run the server locally, the simplest way is to use the flask debug server.
@@ -105,7 +116,16 @@ $env:PIP_CONFIG_FILE="$pwd\pip.conf"
 pip install -r requirements.txt
 ```
 
+## Updating dependencies
 
+We use `pip-compile` to keep track of all project dependencies. The `requirements.in` file lists all dependencies for this
+project. To update these (except for the packages that are version locked) run:
+
+```
+$ pip-compile -U
+```
+
+> Note: `pip-tools` must be installed to run the above command.
 
 # Docker run
 
