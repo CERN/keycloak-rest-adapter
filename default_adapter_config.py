@@ -50,7 +50,10 @@ CLIENT_DEFAULTS = {
             "address",
             "offline_access",
             "phone",
-        ]
+        ],
+        "attributes": {
+            "oauth2.device.authorization.grant.enabled": "true"
+        }
     },
     "saml": {
         "protocolMappers": [],
