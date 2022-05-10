@@ -71,7 +71,7 @@ class Client:
         for key, value in new_definition.items():
             if key == "id":  # Skip the client GUID
                 continue
-            elif key in self.definition or key in ["description", "attributes"]:
+            elif key in self.definition or key in ["description", "attributes", "baseUrl"]:
                 self.logger.debug("Changing value: {}".format(value))
                 self.definition[key] = value
             else:
