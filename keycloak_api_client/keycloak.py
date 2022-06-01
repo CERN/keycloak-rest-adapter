@@ -43,6 +43,7 @@ class KeycloakAPIClient:
         mfa_migrated_role,
         master_realm="master",
         mfa_realm="mfa",
+        guest_realm="guest",
     ):
         """
         Initialize the class with the params needed to use the API.
@@ -59,6 +60,7 @@ class KeycloakAPIClient:
         self.client_secret = client_secret
         self.master_realm = master_realm
         self.mfa_realm = mfa_realm
+        self.guest_realm = guest_realm
         self.log_dir = log_dir
         self.mfa_migrated_role = mfa_migrated_role
 
@@ -88,6 +90,7 @@ class KeycloakAPIClient:
         self.client_secret = None
         self.master_realm = None
         self.mfa_realm = None
+        self.guest_realm = None
         self.base_url = None
         self.headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
@@ -959,36 +962,39 @@ class KeycloakAPIClient:
         elif client.type in ClientTypes.OIDC:
             return self.create_new_openid_client(client)
 
-    def get_user_by_username(self, username, realm=None):
+    def get_user_by_username(self, username, is_guest=False, realm=None):
         """
         Get user by userID
         """
         if not realm:
             realm = self.realm
         headers = self.__get_admin_access_token_headers()
-        url = "{0}/admin/realms/{1}/users?username={2}&exact=true".format(
-            self.base_url, realm, username
+        field_key = 'username'
+        # Query user by username if a guest account.
+        if is_guest:
+            field_key = 'email'
+        url = "{0}/admin/realms/{1}/users?{2}={3}&exact=true".format(
+            self.base_url, realm, field_key, username
         )
-
         ret = self.__send_request("get", url, headers=headers)
 
         self.logger.info("Getting user '{0}' object".format(username))
         found_users = json.loads(ret.text)
 
         for user in found_users:
-            if user["username"] == username:
+            if user["username"] == username or user["email"] == username:
                 self.logger.info("Found user '{0}' ({1})".format(username, user["id"]))
                 return user
 
         self.logger.info("User '{0}' NOT found".format(username))
         raise ResourceNotFoundError("User not found")
 
-    def update_user_properties(self, username, realm, **kwargs):
+    def update_user_properties(self, upn, realm, is_guest=False, **kwargs):
         """
         Update user properties
         """
         headers = self.__get_admin_access_token_headers()
-        user_object = self.get_user_by_username(username, realm)
+        user_object = self.get_user_by_username(upn, is_guest, realm)
         if user_object:
             url = "{0}/admin/realms/{1}/users/{2}".format(
                 self.base_url, realm, user_object["id"]
@@ -1003,12 +1009,15 @@ class KeycloakAPIClient:
                     )
             self.__send_request("put", url, data=json.dumps(user_object), headers=headers)
 
-            updated_user = self.get_user_by_username(username)
-            self.logger.info("User '{0}' updated: {1}".format(username, updated_user))
+            if realm == keycloak_client.guest_realm:
+                updated_user = self.get_user_by_username(kwargs["email"], is_guest, realm)
+            else:
+                updated_user = self.get_user_by_username(upn, is_guest, realm)
+            self.logger.info("User '{0}' updated: {1}".format(upn, updated_user))
             return updated_user
         else:
             self.logger.info(
-                "Cannot update user '{0}' properties. User not found".format(username)
+                "Cannot update user '{0}' properties. User not found".format(upn)
             )
             return
 

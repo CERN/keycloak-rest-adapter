@@ -41,6 +41,18 @@ user_model = user_ns.model(
     },
 )
 
+guest_user_model = user_ns.model(
+    "User",
+    {
+        "enabled": fields.Boolean,
+        "totp": fields.Boolean,
+        "emailVerified": fields.Boolean,
+        "firstName": fields.String,
+        "lastName": fields.String,
+        "email": fields.String,
+    },
+)
+
 
 @ns.route(
     "/openid/<path:target_client_id>/token-exchange-permissions/<path:requestor_client_id>"
@@ -344,6 +356,27 @@ class UserDetails(Resource):
             return json_response(
                 "Cannot update '{0}' properties. Check if user exists or properties are valid".format(
                     username
+                ),
+                400,
+            )
+
+
+@user_ns.route("/guest/<email>")
+class UserDetailsGuest(Resource):
+    @user_ns.doc(body=guest_user_model)
+    @auth_lib_helper.oidc_validate_api
+    def put(self, email):
+        """Update a user in the guest realm"""
+        data = get_request_data(request)
+        updated_user = keycloak_client.update_user_properties(
+            email, keycloak_client.guest_realm, is_guest=True, **data
+        )
+        if updated_user:
+            return jsonify(updated_user)
+        else:
+            return json_response(
+                "Cannot update '{0}' properties. Check if user exists or properties are valid".format(
+                    email
                 ),
                 400,
             )
