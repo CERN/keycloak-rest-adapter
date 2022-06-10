@@ -268,12 +268,13 @@ class TestUserEndpointsApi(WebTestBase):
             ]
         )
 
-    def test_delete_otp_settings_already_enabled_no_webauthn(self):
+    def test_delete_otp_settings_already_enabled_no_webauthn_nonmigrated(self):
         # prepare
         self.keycloak_api_mock.is_credential_enabled_for_user.side_effect = [
             (True, False),
             (False, False),
         ]
+        self.keycloak_api_mock.is_user_migrated_by_username.side_effect = [False]
 
         # act
         resp = self.app_client.delete(self._get_otp_endpoint())
@@ -284,6 +285,31 @@ class TestUserEndpointsApi(WebTestBase):
             "Cannot disable OTP if WebAuthn is not enabled".casefold()
             in resp.json.casefold()
         )
+        self.keycloak_api_mock.is_credential_enabled_for_user.assert_has_calls(
+            [
+                call(self.user_id, REQUIRED_ACTION_CONFIGURE_OTP, CREDENTIAL_TYPE_OTP),
+                call(
+                    self.user_id,
+                    REQUIRED_ACTION_WEBAUTHN_REGISTER,
+                    CREDENTIAL_TYPE_WEBAUTHN,
+                ),
+            ]
+        )
+
+    def test_delete_otp_settings_already_enabled_no_webauthn_migrated(self):
+        # prepare
+        self.keycloak_api_mock.is_credential_enabled_for_user.side_effect = [
+            (True, False),
+            (False, False),
+        ]
+        self.keycloak_api_mock.is_user_migrated_by_username.side_effect = [True]
+
+        # act
+        resp = self.app_client.delete(self._get_otp_endpoint())
+
+        # assert
+        self.assertEqual(200, resp.status_code)
+        self.assertTrue("OTP Disabled".casefold() in resp.json.casefold())
         self.keycloak_api_mock.is_credential_enabled_for_user.assert_has_calls(
             [
                 call(self.user_id, REQUIRED_ACTION_CONFIGURE_OTP, CREDENTIAL_TYPE_OTP),
@@ -471,12 +497,13 @@ class TestUserEndpointsApi(WebTestBase):
             ]
         )
 
-    def test_delete_webauthn_settings_already_enabled_no_webauthn(self):
+    def test_delete_webauthn_settings_already_enabled_no_otp_nonmigrated(self):
         # prepare
         self.keycloak_api_mock.is_credential_enabled_for_user.side_effect = [
             (False, False),
             (True, False),
         ]
+        self.keycloak_api_mock.is_user_migrated_by_username.side_effect = [False]
 
         # act
         resp = self.app_client.delete(self._get_webauthn_endpoint())
@@ -487,6 +514,31 @@ class TestUserEndpointsApi(WebTestBase):
             "Cannot disable webauthn if OTP is not enabled".casefold()
             in resp.json.casefold()
         )
+        self.keycloak_api_mock.is_credential_enabled_for_user.assert_has_calls(
+            [
+                call(self.user_id, REQUIRED_ACTION_CONFIGURE_OTP, CREDENTIAL_TYPE_OTP),
+                call(
+                    self.user_id,
+                    REQUIRED_ACTION_WEBAUTHN_REGISTER,
+                    CREDENTIAL_TYPE_WEBAUTHN,
+                ),
+            ]
+        )
+
+    def test_delete_webauthn_settings_already_enabled_no_otp_migrated(self):
+        # prepare
+        self.keycloak_api_mock.is_credential_enabled_for_user.side_effect = [
+            (False, False),
+            (True, False),
+        ]
+        self.keycloak_api_mock.is_user_migrated_by_username.side_effect = [True]
+
+        # act
+        resp = self.app_client.delete(self._get_webauthn_endpoint())
+
+        # assert
+        self.assertEqual(200, resp.status_code)
+        self.assertTrue("webauthn Disabled".casefold() in resp.json.casefold())
         self.keycloak_api_mock.is_credential_enabled_for_user.assert_has_calls(
             [
                 call(self.user_id, REQUIRED_ACTION_CONFIGURE_OTP, CREDENTIAL_TYPE_OTP),

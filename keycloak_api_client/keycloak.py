@@ -1274,5 +1274,9 @@ class KeycloakAPIClient:
         else:
             return mfa_user, self.mfa_realm
 
+    def is_user_migrated_by_username(self, username):
+        mfa_user = self.get_user_by_username(username, realm=self.mfa_realm)
+        return self._is_user_migrated_by_id(mfa_user["id"])
+
 
 keycloak_client: KeycloakAPIClient = KeycloakAPIClient()

@@ -479,7 +479,8 @@ class OTP(Resource):
             return str(e), 404
         if not otp_enabled:
             return "OTP already disabled", 200
-        if not webauthn_enabled:
+        if not webauthn_enabled and not keycloak_client.is_user_migrated_by_username(username):
+            # non-migrated users shouldn't be able to disable both 2FA methods
             return (
                 "Cannot disable OTP if WebAuthn is not enabled. At least one MFA method must always be enabled for the user.",
                 403,
@@ -537,7 +538,8 @@ class WebAuthn(Resource):
             return str(e), 404
         if not webauthn_enabled:
             return "WebAuthn already disabled", 200
-        if not otp_enabled:
+        if not otp_enabled and not keycloak_client.is_user_migrated_by_username(username):
+            # non-migrated users shouldn't be able to disable both 2FA methods
             return (
                 "Cannot disable WebAuthn if OTP is not enabled. At least one MFA method must always be enabled for the user.",
                 403,
