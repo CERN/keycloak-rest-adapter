@@ -1256,7 +1256,7 @@ class KeycloakAPIClient:
         )
 
     def _is_user_migrated_by_id(self, user_id):
-        url = "{0}/admin/realms/{1}/users/{2}/role-mappings/realm".format(
+        url = "{0}/admin/realms/{1}/users/{2}/role-mappings/realm/composite".format(
             self.base_url, self.mfa_realm, user_id
         )
         response = self.__send_request("get", url, headers=self.headers)
