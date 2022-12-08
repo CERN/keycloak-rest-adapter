@@ -4,7 +4,7 @@ requests==2.23.*
 flask-restx==0.2.0
 # From urllib3 docs: urllib3 (requests) will try to load the default system certificate stores
 # The most reliable cross-platform method is to use the certifi package which provides Mozilla's root certificate bundle
-certifi==2019.11.28
+certifi==2022.12.7
 werkzeug==0.16.1
 flask_cors==3.0.*
 authlib-helpers==1.0.3
