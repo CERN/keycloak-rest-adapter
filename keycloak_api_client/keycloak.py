@@ -1010,7 +1010,7 @@ class KeycloakAPIClient:
             self.__send_request("put", url, data=json.dumps(user_object), headers=headers)
 
             if realm == keycloak_client.guest_realm:
-                updated_user = self.get_user_by_username(kwargs["email"], is_guest, realm)
+                updated_user = self.get_user_by_username(user_object["email"], is_guest, realm)
             else:
                 updated_user = self.get_user_by_username(upn, is_guest, realm)
             self.logger.info("User '{0}' updated: {1}".format(upn, updated_user))
