@@ -52,7 +52,8 @@ CLIENT_DEFAULTS = {
             "phone",
         ],
         "attributes": {
-            "oauth2.device.authorization.grant.enabled": "true"
+            "oauth2.device.authorization.grant.enabled": "true",
+            "post.logout.redirect.uris": "+"
         }
     },
     "saml": {
