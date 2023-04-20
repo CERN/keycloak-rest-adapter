@@ -2,4 +2,6 @@ docker
 pytest
 coverage
 flake8
-pylint
+black==19.3b0
+pre-commit
+callee

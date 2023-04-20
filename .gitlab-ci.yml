@@ -1,4 +1,4 @@
-image: python:3.8-slim
+image: gitlab-registry.cern.ch/authzsvc/docker-images/python-base:3.8
 variables:
   CLIENT_ID: keycloak-rest-adapter
   NAMESPACE_DEV: test-keycloak-rest-adapter
@@ -10,8 +10,9 @@ variables:
   KEYCLOAK_REALM_PROD: cern
   KEYCLOAK_REALM_QA: cern
   KEYCLOAK_REALM_DEV: cern
-  OPENSHIFT_SERVER_PROD: https://openshift.cern.ch
-  OPENSHIFT_SERVER_DEV: https://openshift-dev.cern.ch
+  OPENSHIFT_SERVER_PROD: https://api.paas.okd.cern.ch
+  OPENSHIFT_SERVER_QA: https://api.paas.okd.cern.ch
+  OPENSHIFT_SERVER_DEV: https://api.paas.okd.cern.ch
   BUILD_ENV_DEV: staging
   BUILD_ENV_PROD: production
   BUILD_ENV_QA: qa
@@ -21,7 +22,7 @@ variables:
   APP_NAME: ${CI_PROJECT_NAME}
 
 stages:
-  - lint
+  - lint_verify_deps
   - test
   - build_docker
   - deploy
@@ -53,22 +54,16 @@ stages:
     - oc tag "gitlab-registry.cern.ch/${LOWERCASE_PATH}:${TAG}" "${APP_NAME}:latest" --token=${TOKEN} --server=${OPENSHIFT_SERVER} -n ${NAMESPACE}
 
 ### Linting
-flake8:
-  image: python:3.8-alpine
-  stage: lint
+flake8_verify_deps:
+  stage: lint_verify_deps
   before_script:
     - pip install -r dev-requirements.txt
+    - pip install pip-tools
+    - apt-get -y update
+    - apt-get -y -qq install git
   script:
     - python -m flake8 *.py keycloak_api_client
-  allow_failure: true
-
-pylint:
-  image: python:3.8-alpine
-  stage: lint
-  before_script:
-    - pip install -r dev-requirements.txt
-  script:
-    - python -m pylint *.py keycloak_api_client
+    - PIP_CONFIG_FILE=$(pwd)/pip.conf pip-compile --quiet && git diff --exit-code requirements.txt
   allow_failure: true
 
 ### Testing
@@ -92,7 +87,9 @@ test:
     - coverage report
   artifacts:
     reports:
-      cobertura: coverage.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
     paths:
       - coverage_html_report
     expire_in: 1 week
@@ -148,7 +145,7 @@ deploy_qa:
     CLIENT_SECRET: ${CLIENT_SECRET_QA}
     ENVIRONMENT: qa
     TOKEN: ${OPENSHIFT_QA_TOKEN}
-    OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_PROD}
+    OPENSHIFT_SERVER: ${OPENSHIFT_SERVER_QA}
     NAMESPACE: ${NAMESPACE_QA}
     TAG: ${QA_TAG}
     ROUTE_HOSTNAME: https://${NAMESPACE_QA}.web.cern.ch

@@ -31,6 +31,7 @@ CREDENTIAL_TYPE_WEBAUTHN = "webauthn"
 REQUIRED_ACTION_CONFIGURE_OTP = "CONFIGURE_TOTP"
 REQUIRED_ACTION_WEBAUTHN_REGISTER = "webauthn-register"
 
+
 class WebTestBase(unittest.TestCase, metaclass=ABCMeta):
     """
     Base Class for web app tests
@@ -47,16 +48,22 @@ class WebTestBase(unittest.TestCase, metaclass=ABCMeta):
         self.app = create_app()
         self.app.testing = True
         self.app_client = self.app.test_client()
-        self.app_client.environ_base['HTTP_AUTHORIZATION'] = 'Bearer 1234'
+        self.app_client.environ_base["HTTP_AUTHORIZATION"] = "Bearer 1234"
 
     def setUp(self):
         self.addCleanup(patch.stopall)
-        self.keycloak_api_init_mock = patch("app_factory.keycloak_client.init_app").start()
+        self.keycloak_api_init_mock = patch(
+            "app_factory.keycloak_client.init_app"
+        ).start()
         self.keycloak_api_mock = patch("api_definitions.keycloak_client").start()
         self.keycloak_api_mock.CREDENTIAL_TYPE_OTP = CREDENTIAL_TYPE_OTP
         self.keycloak_api_mock.CREDENTIAL_TYPE_WEBAUTHN = CREDENTIAL_TYPE_WEBAUTHN
-        self.keycloak_api_mock.REQUIRED_ACTION_CONFIGURE_OTP = REQUIRED_ACTION_CONFIGURE_OTP
-        self.keycloak_api_mock.REQUIRED_ACTION_WEBAUTHN_REGISTER = REQUIRED_ACTION_WEBAUTHN_REGISTER
+        self.keycloak_api_mock.REQUIRED_ACTION_CONFIGURE_OTP = (
+            REQUIRED_ACTION_CONFIGURE_OTP
+        )
+        self.keycloak_api_mock.REQUIRED_ACTION_WEBAUTHN_REGISTER = (
+            REQUIRED_ACTION_WEBAUTHN_REGISTER
+        )
         self._create_app()
         self.mock_auth()
 
@@ -65,13 +72,9 @@ class WebTestBase(unittest.TestCase, metaclass=ABCMeta):
             roles = []
         self.jwt_mock = patch("authlib_helpers.decorators.jwt").start()
         self.user_info_mock = patch("authlib_helpers.decorators.UserInfo").start()
-       
+
         self.jwt_mock.return_value.decode.return_value = {"decoded": True}
         self.user_info_mock.return_value = {
             "azp": app_name,
-            "resource_access": {
-                "keycloak-rest-adapter": {
-                    "roles": roles
-                }
-            }
+            "resource_access": {"keycloak-rest-adapter": {"roles": roles}},
         }

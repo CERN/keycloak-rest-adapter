@@ -1,0 +1,15 @@
+Flask==1.1.1
+flask_cors
+jinja2==3.0.3
+itsdangerous==2.0.1
+werkzeug==0.16.1
+authlib-helpers==1.0.3
+python-dotenv
+requests
+flask-restx
+gunicorn
+# From urllib3 docs: urllib3 (requests) will try to load the default system certificate stores
+# The most reliable cross-platform method is to use the certifi package which provides Mozilla's root certificate bundle
+certifi==2019.11.28
+pip-tools
+pre-commit

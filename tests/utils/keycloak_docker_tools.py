@@ -45,8 +45,7 @@ def create_keycloak_docker():
                 INTEGRATION_TESTING_IMAGE,
                 name=INTEGRATION_CONTAINER_NAME,
                 ports={"8080/tcp": 8081},
-                environment={"KEYCLOAK_USER": "admin",
-                             "KEYCLOAK_PASSWORD": "admin"},
+                environment={"KEYCLOAK_USER": "admin", "KEYCLOAK_PASSWORD": "admin"},
                 detach=True,
             )
             print("Sleeping for 5 secs so that Keycloak is up")
@@ -58,4 +57,6 @@ def create_keycloak_docker():
         print("Keycloak should be working fine now...")
     except Exception as e:
         print(
-            f"Exception occured while starting Keycloak container. Make sure you have Docker installed and running, and that your user is allowed to access it!. Exception: {e}")
+            f"Exception occured while starting Keycloak container. Make sure you have Docker installed and running, and that your user is allowed to access it!. Exception: {e}"
+        )
+        exit()

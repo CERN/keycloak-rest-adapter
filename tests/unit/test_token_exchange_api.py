@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
+from model import Client
 
 from tests.utils.tools import API_ROOT, WebTestBase
 
@@ -17,9 +18,9 @@ class TestTokenExchangePermissions(WebTestBase):
 
     def test_delete_token_exchange_missing_client(self):
         # prepare
-        self.keycloak_api_mock.get_client_by_client_id.side_effect = [
-            self.target_client,
-            None
+        self.keycloak_api_mock.get_client_object.side_effect = [
+            Client(client_id=self.target_client, app=self.app),
+            None,
         ]
 
         # act
@@ -30,11 +31,13 @@ class TestTokenExchangePermissions(WebTestBase):
 
     def test_delete_token_exchange_bad_response(self):
         # prepare
-        self.keycloak_api_mock.get_client_by_client_id.side_effect = [
-            self.target_client,
-            self.requestor_client
+        self.keycloak_api_mock.get_client_object.side_effect = [
+            Client(client_id=self.target_client, app=self.app),
+            Client(client_id=self.requestor_client, app=self.app),
         ]
-        self.keycloak_api_mock.revoke_token_exchange_permissions.side_effect = ValueError("Clients not found")
+        self.keycloak_api_mock.revoke_token_exchange_permissions.side_effect = ValueError(
+            "Clients not found"
+        )
 
         # act
         resp = self.app_client.delete(self._get_endpoint())
@@ -45,11 +48,13 @@ class TestTokenExchangePermissions(WebTestBase):
 
     def test_delete_token_exchange_ok(self):
         # prepare
-        self.keycloak_api_mock.get_client_by_client_id.side_effect = [
+        self.keycloak_api_mock.get_client_object.side_effect = [
             self.target_client,
-            self.requestor_client
+            self.requestor_client,
         ]
-        self.keycloak_api_mock.revoke_token_exchange_permissions.return_value.status_code = 200
+        self.keycloak_api_mock.revoke_token_exchange_permissions.return_value.status_code = (
+            200
+        )
 
         # act
         resp = self.app_client.delete(self._get_endpoint())
@@ -60,12 +65,16 @@ class TestTokenExchangePermissions(WebTestBase):
 
     def test_delete_token_exchange_problem_removing(self):
         # prepare
-        self.keycloak_api_mock.get_client_by_client_id.side_effect = [
-            self.target_client,
-            self.requestor_client
+        self.keycloak_api_mock.get_client_object.side_effect = [
+            Client(client_id=self.target_client, app=self.app),
+            Client(client_id=self.requestor_client, app=self.app),
         ]
-        self.keycloak_api_mock.revoke_token_exchange_permissions.return_value.status_code = 500
-        self.keycloak_api_mock.revoke_token_exchange_permissions.return_value.reason = "error"
+        self.keycloak_api_mock.revoke_token_exchange_permissions.return_value.status_code = (
+            500
+        )
+        self.keycloak_api_mock.revoke_token_exchange_permissions.return_value.reason = (
+            "error"
+        )
 
         # act
         resp = self.app_client.delete(self._get_endpoint())
@@ -76,9 +85,9 @@ class TestTokenExchangePermissions(WebTestBase):
 
     def test_grant_token_exchange_missing_client(self):
         # prepare
-        self.keycloak_api_mock.get_client_by_client_id.side_effect = [
-            self.target_client,
-            None
+        self.keycloak_api_mock.get_client_object.side_effect = [
+            Client(client_id=self.target_client, app=self.app),
+            None,
         ]
 
         # act
@@ -89,12 +98,18 @@ class TestTokenExchangePermissions(WebTestBase):
 
     def test_grant_token_exchange_creation_error(self):
         # prepare
-        self.keycloak_api_mock.get_client_by_client_id.side_effect = [
-            self.target_client,
-            self.requestor_client
+        target = Client(client_id=self.target_client, app=self.app)
+        requestor = Client(client_id=self.requestor_client, app=self.app)
+        self.keycloak_api_mock.get_client_object.side_effect = [
+            target,
+            requestor,
         ]
-        self.keycloak_api_mock.grant_token_exchange_permissions.return_value.status_code = 400
-        self.keycloak_api_mock.grant_token_exchange_permissions.return_value.reason = "error"
+        self.keycloak_api_mock.grant_token_exchange_permissions.return_value.status_code = (
+            400
+        )
+        self.keycloak_api_mock.grant_token_exchange_permissions.return_value.reason = (
+            "error"
+        )
 
         # act
         resp = self.app_client.put(self._get_endpoint())
@@ -102,16 +117,24 @@ class TestTokenExchangePermissions(WebTestBase):
         # assert
         self.assertEqual(400, resp.status_code)
         self.assertEqual("error", resp.json.casefold())
-        self.keycloak_api_mock.grant_token_exchange_permissions.assert_called_with(self.target_client, self.requestor_client)
+        self.keycloak_api_mock.grant_token_exchange_permissions.assert_called_with(
+            target, requestor
+        )
 
     def test_grant_token_exchange_creation_ok(self):
         # prepare
-        self.keycloak_api_mock.get_client_by_client_id.side_effect = [
-            self.target_client,
-            self.requestor_client
+        target = Client(client_id=self.target_client, app=self.app)
+        requestor = Client(client_id=self.requestor_client, app=self.app)
+        self.keycloak_api_mock.get_client_object.side_effect = [
+            target,
+            requestor,
         ]
-        self.keycloak_api_mock.grant_token_exchange_permissions.return_value.status_code = 200
-        self.keycloak_api_mock.grant_token_exchange_permissions.return_value.reason = "success"
+        self.keycloak_api_mock.grant_token_exchange_permissions.return_value.status_code = (
+            200
+        )
+        self.keycloak_api_mock.grant_token_exchange_permissions.return_value.reason = (
+            "success"
+        )
 
         # act
         resp = self.app_client.put(self._get_endpoint())
@@ -119,4 +142,6 @@ class TestTokenExchangePermissions(WebTestBase):
         # assert
         self.assertEqual(200, resp.status_code)
         self.assertEqual("success", resp.json.casefold())
-        self.keycloak_api_mock.grant_token_exchange_permissions.assert_called_with(self.target_client, self.requestor_client)
+        self.keycloak_api_mock.grant_token_exchange_permissions.assert_called_with(
+            target, requestor
+        )

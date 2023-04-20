@@ -1,13 +1,12 @@
 from typing import Dict
 from xml.etree import ElementTree as ET
-
 from flask import make_response, jsonify, current_app
 
 JSON_MIME_TYPE = "application/json"
 
 
 def get_supported_protocols() -> Dict[str, str]:
-    return current_app.config['AUTH_PROTOCOLS']
+    return current_app.config["AUTH_PROTOCOLS"]
 
 
 def json_response(data="", status=200, headers=None):
@@ -69,3 +68,11 @@ def validate_protocol_data(data, supported_protocols: Dict[str, str]):
 
 class ResourceNotFoundError(Exception):
     pass
+
+
+class KeycloakAPIError(Exception):
+    def __init__(self, status_code, message):
+        obj = {"status_code": status_code, "message": message}
+        super().__init__(obj)
+        self.status_code = status_code
+        self.message = message

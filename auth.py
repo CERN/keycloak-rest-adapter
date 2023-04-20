@@ -13,15 +13,17 @@ class UserAuthLibHelper(AuthLibHelper):
     Authlib helper extension adding a second authentication decorator for the rest adapter
     """
 
-    def _initialize(self,
-            user_access_role: str,
-            multifactor_role: str,
-            access_role: str,
-            client_id: str,
-            authorized_apps: List[str],
-            oidc_jwks_url: str,
-            oidc_issuer: str,
-            logger: Logger):
+    def _initialize(
+        self,
+        user_access_role: str,
+        multifactor_role: str,
+        access_role: str,
+        client_id: str,
+        authorized_apps: List[str],
+        oidc_jwks_url: str,
+        oidc_issuer: str,
+        logger: Logger,
+    ):
         """
         Inits data based on passed params
         :param user_access_role: the role needed in order to perform self-service (user) operations
@@ -40,26 +42,18 @@ class UserAuthLibHelper(AuthLibHelper):
             authorized_apps=authorized_apps,
             oidc_jwks_url=oidc_jwks_url,
             oidc_issuer=oidc_issuer,
-            logger=logger
+            logger=logger,
         )
 
-    def __init__(
-        self,
-        claims_class: ImplicitIDToken = ImplicitIDTokenNoNonce,
-    ):
+    def __init__(self, claims_class: ImplicitIDToken = ImplicitIDTokenNoNonce):
         """
         Parameterless Constructor
 
         :param claims_class: the class used for validation of claims, could be something else in case of specific needs
         """
         super(UserAuthLibHelper, self).__init__(
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            claims_class=claims_class)
+            None, None, None, None, None, None, claims_class=claims_class
+        )
         self.user_access_role: str = None
         self.multifactor_role: str = None
 
@@ -68,14 +62,14 @@ class UserAuthLibHelper(AuthLibHelper):
         Initialize from an application's config
         """
         self._initialize(
-            user_access_role=app.config['AUTH_USER_ACTIONS_ROLE'],
-            multifactor_role=app.config['AUTH_USER_ACTIONS_MFA_ROLE'],
-            access_role=app.config['AUTH_API_ACCESS_ROLE'],
-            client_id=app.config['OIDC_CLIENT_ID'],
-            authorized_apps=app.config['AUTH_AUTHORIZED_APPS'],
-            oidc_jwks_url=app.config['OIDC_JWKS_URL'],
-            oidc_issuer=app.config['OIDC_ISSUER'],
-            logger=app.logger
+            user_access_role=app.config["AUTH_USER_ACTIONS_ROLE"],
+            multifactor_role=app.config["AUTH_USER_ACTIONS_MFA_ROLE"],
+            access_role=app.config["AUTH_API_ACCESS_ROLE"],
+            client_id=app.config["OIDC_CLIENT_ID"],
+            authorized_apps=app.config["AUTH_AUTHORIZED_APPS"],
+            oidc_jwks_url=app.config["OIDC_JWKS_URL"],
+            oidc_issuer=app.config["OIDC_ISSUER"],
+            logger=app.logger,
         )
 
     def _validate_user_access(

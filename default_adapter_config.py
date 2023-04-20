@@ -8,11 +8,15 @@ KEYCLOAK_CLIENT_ID = "keycloak-rest-adapter"
 # the "master" realm
 KEYCLOAK_CLIENT_SECRET = "DELETED"
 
-# Note this must be the target realm where you will create your clients
+# Note this is the realm where clients will be created
 KEYCLOAK_REALM = "cern"
 
 # OAuth config (for the Swagger UI)
 # The client ID used to login from the UI
+OAUTH_AUTH_URL = "https://keycloak-dev.cern.ch/auth/realms/cern/protocol/openid-connect/auth"
+OIDC_JWKS_URL = "https://keycloak-dev.cern.ch/auth/realms/cern/protocol/openid-connect/certs"
+OIDC_ISSUER = "https://keycloak-dev.cern.ch/auth/realms/cern"
+
 SWAGGER_UI_OAUTH_CLIENT_ID = "keycloak-rest-adapter"
 
 # OIDC config
@@ -34,22 +38,47 @@ CLIENT_DEFAULTS = {
     "openid": {
         "protocolMappers": [],
         "webOrigins": ["+"],
-        "consentRequired": False
+        "consentRequired": False,
+        "defaultClientScopes": [
+            "cern-login-info",
+            "profile",
+            "email",
+            "authz-roles",
+            "web-origins",
+        ],
+        "optionalClientScopes": [
+            "address",
+            "offline_access",
+            "phone",
+        ],
+        "attributes": {
+            "oauth2.device.authorization.grant.enabled": "true",
+            "post.logout.redirect.uris": "+"
+        }
     },
     "saml": {
         "protocolMappers": [],
-        "consentRequired": False
-    }
+        "consentRequired": False,
+        "defaultClientScopes": [
+            "saml-cern-login-info",
+            "saml-cern-profile",
+            "saml-email",
+            "saml-roles",
+        ],
+    },
 }
 
 # Authentication protocols
-AUTH_PROTOCOLS = {
-    "saml": "definition",
-    "openid": "clientId"
-}
+AUTH_PROTOCOLS = {"saml": "definition", "openid": "clientId"}
 
 # Auth configs
 AUTH_AUTHORIZED_APPS = ["authorization-service-api"]
 AUTH_API_ACCESS_ROLE = "admin"
 AUTH_USER_ACTIONS_ROLE = "user"
 AUTH_USER_ACTIONS_MFA_ROLE = "user_mfa"
+
+# Log config
+LOG_DIR = "/tmp"
+
+# Always-on 2FA migration role
+MFA_MIGRATED_ROLE = "2fa-migrated"

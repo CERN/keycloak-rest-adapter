@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" validUntil="2020-06-19T12:00:03Z" cacheDuration="PT604800S" entityID="test-hannah-55">
+  <md:SPSSODescriptor AuthnRequestsSigned="true" WantAssertionsSigned="true" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+        <ds:X509Data>
+          <ds:X509Certificate>MIID2zCCAsOgAwIBAgIJAPAc0z/SV8AiMA0GCSqGSIb3DQEBCwUAMIGDMQswCQYDVQQGEwJDaDELMAkGA1UECAwCR0UxDzANBgNVBAcMBk1leXJpbjENMAsGA1UECgwEQ0VSTjELMAkGA1UECwwCSVQxEjAQBgNVBAMMCXRlc3Qtc2FtbDEmMCQGCSqGSIb3DQEJARYXYXV0aHpzdmMtYWRtaW5zQGNlcm4uY2gwHhcNMjAwNjE3MTE1OTE0WhcNMjAwNzE3MTE1OTE0WjCBgzELMAkGA1UEBhMCQ2gxCzAJBgNVBAgMAkdFMQ8wDQYDVQQHDAZNZXlyaW4xDTALBgNVBAoMBENFUk4xCzAJBgNVBAsMAklUMRIwEAYDVQQDDAl0ZXN0LXNhbWwxJjAkBgkqhkiG9w0BCQEWF2F1dGh6c3ZjLWFkbWluc0BjZXJuLmNoMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArDSafNSGb81H6XcqPCvCz4hebgakILeMSwnT1gDL8OKBXTXmOEkIhrXPgmGl40b2ixKKSw5Ambscu2ougm809hYgyKzXYWEokjQk6a8DMmN/OxJZxkFWeowq17E9rM0qAEIYboaquBrLE9fYvJ+KENss+gcW/Tkq8O7VIIoXjEo8TH6HbWZCo+zrCfkCxS92jUrOSJcucJ2Q2rnOHqyU05ndZZlPF/Yqz0l+TebF8el+yQNm3Lu3VgRmLsNhNxlLnsNdR9iT7PlXzdNIC//oYjGUgx93pbLz+UGtrWHvGTbenxg2DLFVHBxdWvWNcYBhM6VFOu5+Ef+yk8rnD+CQewIDAQABo1AwTjAdBgNVHQ4EFgQUK8JED+aaDZ3rLkLeBkdkGn/UfEUwHwYDVR0jBBgwFoAUK8JED+aaDZ3rLkLeBkdkGn/UfEUwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAC1JeQUoiYtNUXgBIy9lqbAwURxlJ4zneDD3CtbjIVwQCFx2YuBW4R8ccMDWZ0fBMpn3mlIuVre3e0rIFxL/8ijMzQAo+K8Gut46SSyi+EWKy0QHBh3VJllgPFIY/wIX2F8thptCBW+PaQnoNKEllx3cQnE6+6lIs0EygfVA8JN0lCM4oDW3I30fivjl5UVvWKhYO8iSpwk6K39CV9CE7jz07DZ+tVNItLhBT1QWaoWwnEOib2ib/8nWF1aeLeMMrLPl6buIYExcpN47Is51p0eU5mTdhx8wUzE7w/NAGsdLyaXTC1cv+Fw+XJ3YHRjQGrPokqGG3XTJMONRk1/jw4w==</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="http://test-hannah-44.cern.ch"/>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified</md:NameIDFormat>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="http://test-hannah-44.cern.ch" index="1"/>
+  </md:SPSSODescriptor>
+</md:EntityDescriptor>

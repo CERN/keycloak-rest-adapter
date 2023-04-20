@@ -38,14 +38,18 @@ class TestUserEndpointsApi(WebTestBase):
         self.keycloak_api_mock.realm = "cern"
 
         # act
-        resp = self.app_client.put(self._get_update_endpoint(),
+        resp = self.app_client.put(
+            self._get_update_endpoint(),
             data=json.dumps(body),
-            content_type='application/json')
+            content_type="application/json",
+        )
 
         # assert
         self.assertEqual(200, resp.status_code)
         self.assertEqual(response_mock, resp.json)
-        self.keycloak_api_mock.update_user_properties.assert_called_with(self.user_id, "cern", **body)
+        self.keycloak_api_mock.update_user_properties.assert_called_with(
+            self.user_id, "cern", **body
+        )
 
     def test_update_user_invalid_response(self):
         # prepare
@@ -54,11 +58,17 @@ class TestUserEndpointsApi(WebTestBase):
         self.keycloak_api_mock.realm = "cern"
 
         # act
-        resp = self.app_client.put(self._get_update_endpoint(),
+        resp = self.app_client.put(
+            self._get_update_endpoint(),
             data=json.dumps(body),
-            content_type='application/json')
+            content_type="application/json",
+        )
 
         # assert
         self.assertEqual(400, resp.status_code)
-        self.assertTrue(f"Cannot update '{self.user_id}'".casefold() in resp.json["data"].casefold())
-        self.keycloak_api_mock.update_user_properties.assert_called_with(self.user_id, "cern", **body)
+        self.assertTrue(
+            f"Cannot update '{self.user_id}'".casefold() in resp.json["data"].casefold()
+        )
+        self.keycloak_api_mock.update_user_properties.assert_called_with(
+            self.user_id, "cern", **body
+        )
